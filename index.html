@@ -232,11 +232,11 @@ body{width:100vw;height:100vh;overflow:hidden;background:#0C1B2E;font-family:'Na
 .qc-label{color:#C9A84C;font-size:clamp(.78rem,1.8vw,1.02rem);font-weight:800;margin-bottom:8px;letter-spacing:.1em;}
 .qc-label::before{content:'◈ ';}
 .qc-label::after{content:' ◈';}
-.qc-mean{color:#F0E8D0;font-size:clamp(.95rem,2.4vw,1.58rem);font-weight:800;line-height:1.6;text-shadow:0 1px 8px rgba(0,0,0,.9);}
+.qc-mean{color:#F0E8D0;font-size:clamp(1.05rem,2.6vw,1.7rem);font-weight:800;line-height:1.6;text-shadow:0 1px 8px rgba(0,0,0,.9);}
 .qc-sub{color:rgba(200,180,130,.55);font-size:clamp(.75rem,1.6vw,.95rem);font-weight:800;margin-top:8px;}
 
 /* ── 보기 카드 — 한지(韓紙) + 쪽빛 테두리 ── */
-.opt-card{width:100%;max-width:420px;min-height:130px;
+.opt-card{width:100%;max-width:430px;min-height:140px;
   background:linear-gradient(158deg,#FDFAF2,#EFE4C4);
   border:2.5px solid rgba(60,90,140,.45);border-radius:8px;padding:14px 16px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
@@ -258,7 +258,7 @@ body{width:100vw;height:100vh;overflow:hidden;background:#0C1B2E;font-family:'Na
   width:clamp(1.8rem,3.4vw,2.2rem);height:clamp(1.8rem,3.4vw,2.2rem);
   background:rgba(30,60,110,.88);border:1.5px solid rgba(200,168,76,.55);border-radius:50%;
   font-size:clamp(1rem,2.2vw,1.35rem);font-weight:900;color:#F0E8D0;line-height:1;margin-bottom:4px;}
-.oc-i{font-size:clamp(1rem,2.3vw,1.5rem);font-weight:800;color:#1A130A;line-height:1.45;text-align:center;}
+.oc-i{font-size:clamp(1.05rem,2.6vw,1.7rem);font-weight:800;color:#1A130A;line-height:1.45;text-align:center;}
 .opt-card.correct{background:linear-gradient(135deg,#1a5c32,#27ae60)!important;border-color:rgba(39,174,96,.9)!important;animation:ocPop .45s ease;}
 .opt-card.correct .oc-i{color:#fff!important;}
 .opt-card.correct .oc-num{background:rgba(0,70,30,.9)!important;}
@@ -3005,28 +3005,36 @@ function resetWords(){
 // ═════════════════════════════════════════════
 function bgmEnabled(){ return localStorage.getItem('spq_bgm')!=='0'; }
 let bgmSource=null, bgmBuffer=null, bgmGainNode=null;
-const BGM_BEAT=60/128; // BPM 128 → 한 박자(초)
-// 알쏭달쏭 속담 퀴즈 테마 — 동양풍 5음계 (C 장조 펜타토닉)
+const BGM_BEAT=60/80; // 80 BPM — 전통 느낌의 여유로운 속도
+// 전통 가야금(伽倻琴) 스타일 — 계면조(界面調) A단 5음계
+// A3=220, C4=262, D4=294, E4=330, G4=392, A4=440, C5=524, D5=587, E5=659
 const BGM_NOTES=[
-  // ─ 1절: 출발 ─
-  [392,.5],[440,.5],[524,.5],[440,.5],[392,1],[330,.5],[392,.5],
-  [440,.5],[524,.5],[587,.5],[524,.5],[440,1.5],[0,.5],
-  // ─ 2절: 상승 ─
-  [524,.5],[587,.5],[659,.5],[587,.5],[524,.5],[440,.5],[392,.5],[330,.5],
-  [294,.5],[330,.5],[392,.5],[440,.5],[524,2],
-  // ─ 3절: 클라이맥스 ─
-  [659,.5],[659,.5],[587,.5],[524,.5],[440,.5],[524,.5],[587,.5],[0,.5],
-  [524,.5],[440,.5],[392,.5],[330,.5],[392,1],[294,1],
-  // ─ 4절: 마무리 ─
-  [330,.5],[392,.5],[440,.5],[524,.5],[440,.5],[392,.5],[330,.5],[294,.5],
-  [330,.5],[294,.5],[262,.5],[294,.5],[392,2],
+  // ─ 도입: 여백과 함께 조용히 ─
+  [330,2],[0,1],[440,1.5],[392,.5],[330,1],[0,1],
+  [392,2],[330,1],[294,1],[330,1.5],[220,1.5],
+  // ─ 전개: 은은하게 상승 ─
+  [440,1],[524,1],[587,1.5],[524,.5],[440,1],[0,1],
+  [392,1.5],[330,.5],[294,1],[330,2],[0,2],
+  // ─ 고조: 살며시 절정 ─
+  [587,2],[524,1],[440,1],[392,1],[330,1],
+  [392,.5],[440,.5],[524,1.5],[440,.5],[392,1],[330,1],[0,1],
+  // ─ 마무리: 여운을 남기며 ─
+  [330,1.5],[294,.5],[220,1.5],[0,.5],[294,1],[330,1],
+  [294,1],[262,1.5],[220,2.5],[0,2],
 ];
-// 베이스 라인 (사인파, 멜로디와 동길이 32박)
+// 해금(奚琴) 저음 — 부드러운 지속음
 const BGM_BASS=[
-  [196,2],[220,2],[196,2],[131,2],
-  [196,2],[131,2],[196,2],[220,2],
-  [196,2],[220,2],[196,2],[131,2],
-  [220,2],[196,2],[131,2],[196,2],
+  [110,4],[110,4],[110,4],[147,4],
+  [110,4],[110,4],[147,4],[110,4],
+  [110,4],[147,4],[110,4],[98,4],
+  [110,4],[98,4],[110,4],[110,4],
+];
+// 장구(杖鼓) 리듬 — 엷은 타격감
+const BGM_PERC=[
+  [0,1],[1,0],[0,1],[1,0],[0,1],[1,0],[0,1],[1,0], // 1=타격
+  [0,1],[1,0],[0,2],[1,0],[0,1],[1,0],[0,1],[1,0],
+  [0,1],[1,0],[0,1],[1,0],[0,1],[1,0],[0,1],[1,0],
+  [0,1],[1,0],[0,2],[1,0],[0,1],[1,0],[0,2],[0,0],
 ];
 
 async function _buildBGMBuffer(){
@@ -3034,23 +3042,32 @@ async function _buildBGMBuffer(){
   const totalBeats=BGM_NOTES.reduce((s,[,d])=>s+d,0);
   const totalSec=totalBeats*BGM_BEAT;
   const sr=ctx.sampleRate;
-  const oac=new OfflineAudioContext(1,Math.ceil((totalSec+0.05)*sr),sr);
+  const oac=new OfflineAudioContext(1,Math.ceil((totalSec+0.1)*sr),sr);
   let t=0;
-  // 멜로디 레이어 (스퀘어파 — 경쾌한 치프튠)
+  // ── 가야금 멜로디 (삼각파 — 현악기 따뜻한 음색, 퉁기는 감쇠) ──
   for(const [freq,beats] of BGM_NOTES){
     const dur=beats*BGM_BEAT;
     if(freq>0){
       const osc=oac.createOscillator(), g=oac.createGain();
+      const osc2=oac.createOscillator(), g2=oac.createGain();
       osc.connect(g); g.connect(oac.destination);
-      osc.type='square'; osc.frequency.value=freq;
-      g.gain.setValueAtTime(0.08,t);
-      g.gain.setValueAtTime(0.08,t+dur*0.65);
-      g.gain.exponentialRampToValueAtTime(0.001,t+dur*0.92);
+      osc2.connect(g2); g2.connect(oac.destination);
+      osc.type='triangle'; osc.frequency.value=freq;
+      osc2.type='sine';    osc2.frequency.value=freq*1.5;
+      // 퉁기는 느낌: 순간 어택 후 지수 감쇠
+      g.gain.setValueAtTime(0.001,t);
+      g.gain.linearRampToValueAtTime(0.13,t+0.012);
+      g.gain.exponentialRampToValueAtTime(0.04,t+dur*0.45);
+      g.gain.exponentialRampToValueAtTime(0.001,t+Math.min(dur*0.92,dur-0.01));
+      g2.gain.setValueAtTime(0.001,t);
+      g2.gain.linearRampToValueAtTime(0.028,t+0.012);
+      g2.gain.exponentialRampToValueAtTime(0.001,t+dur*0.32);
       osc.start(t); osc.stop(t+dur);
+      osc2.start(t); osc2.stop(t+dur*0.38);
     }
     t+=dur;
   }
-  // 베이스 레이어 (사인파 — 부드러운 저음)
+  // ── 해금 저음 (사인파 — 지속적인 부드러운 저음) ──
   t=0;
   for(const [freq,beats] of BGM_BASS){
     const dur=beats*BGM_BEAT;
@@ -3058,12 +3075,29 @@ async function _buildBGMBuffer(){
       const osc=oac.createOscillator(), g=oac.createGain();
       osc.connect(g); g.connect(oac.destination);
       osc.type='sine'; osc.frequency.value=freq;
-      g.gain.setValueAtTime(0.07,t);
-      g.gain.setValueAtTime(0.07,t+dur*0.88);
+      g.gain.setValueAtTime(0.001,t);
+      g.gain.linearRampToValueAtTime(0.05,t+0.1);
+      g.gain.setValueAtTime(0.05,t+dur*0.82);
       g.gain.exponentialRampToValueAtTime(0.001,t+dur*0.98);
       osc.start(t); osc.stop(t+dur);
     }
     t+=dur;
+  }
+  // ── 장구 리듬 (백색소음 버스트 — 절제된 타격감) ──
+  t=0;
+  for(const [hit] of BGM_PERC){
+    if(hit===1){
+      const len=Math.floor(sr*0.055);
+      const buf=oac.createBuffer(1,len,sr);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.8);
+      const src=oac.createBufferSource(), g=oac.createGain();
+      src.buffer=buf; src.connect(g); g.connect(oac.destination);
+      g.gain.setValueAtTime(0.038,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.05);
+      src.start(t);
+    }
+    t+=BGM_BEAT;
   }
   return await oac.startRendering();
 }
@@ -3264,6 +3298,8 @@ document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 
 </body>
 </html>
+
+
 
 
 
