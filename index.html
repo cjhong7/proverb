@@ -1,0 +1,3263 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>알쏭달쏭 속담 퀴즈</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.5.3/qrcode.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;touch-action:manipulation;}
+body{width:100vw;height:100vh;overflow:hidden;background:#070D1F;font-family:'Nanum Gothic','Apple SD Gothic Neo',sans-serif;user-select:none;-webkit-user-select:none;}
+
+#video{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);z-index:0;}
+.cam-tint{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,5,25,.55);z-index:1;}
+.screen{position:fixed;top:0;left:0;width:100%;height:100%;display:none;z-index:10;}
+
+#settingsWrap{position:fixed;top:16px;right:16px;display:flex;align-items:center;gap:6px;z-index:500;}
+#settingsBtn{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.35);color:#fff;font-size:1.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .3s;}
+#settingsBtn:hover{transform:rotate(90deg);}
+#modeBadgeSm{font-size:.85rem;font-weight:800;padding:3px 7px;border-radius:20px;background:rgba(0,0,0,.45);letter-spacing:-.5px;}
+#settingsLogoutBtn{position:fixed;top:16px;right:16px;z-index:600;padding:11px 20px;border-radius:50px;
+  background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.4);color:#fff;font-size:1rem;font-weight:800;
+  cursor:pointer;font-family:inherit;align-items:center;gap:6px;backdrop-filter:blur(8px);transition:all .2s;}
+#settingsLogoutBtn:hover{background:rgba(255,120,120,.3);border-color:rgba(255,150,150,.7);}
+
+/* Buttons */
+.btn{padding:17px 42px;font-size:clamp(1.2rem,2.8vw,1.8rem);font-weight:800;border:none;border-radius:50px;
+  cursor:pointer;transition:transform .1s,box-shadow .1s;font-family:inherit;}
+.btn:active{transform:scale(.95);}
+.btn-primary{background:linear-gradient(135deg,#102D7A,#1A4FBB);color:#F0F4FF;box-shadow:0 8px 24px rgba(10,30,100,.6),0 0 0 1px rgba(168,196,255,.35);}
+.btn-primary:hover{box-shadow:0 12px 32px rgba(10,30,100,.8),0 0 0 2px rgba(168,196,255,.65);transform:translateY(-2px);}
+.btn-ghost{background:rgba(255,255,255,.15);backdrop-filter:blur(8px);color:#fff;border:2px solid rgba(255,255,255,.35);}
+.btn-sm{padding:12px 24px;font-size:1.05rem;}
+
+/* ──── MODE SELECT ──── */
+#screen-mode{flex-direction:column;align-items:center;justify-content:center;gap:28px;background:rgba(0,0,0,.62);}
+.mode-cards{display:flex;gap:28px;flex-wrap:wrap;justify-content:center;}
+.mode-card{background:rgba(255,255,255,.1);backdrop-filter:blur(12px);border:3px solid rgba(255,255,255,.28);
+  border-radius:26px;padding:40px 34px;width:260px;cursor:pointer;text-align:center;color:#fff;transition:all .2s;}
+.mode-card:hover{transform:translateY(-6px) scale(1.03);border-color:#4A80E8;background:rgba(26,64,180,.2);}
+.mode-card .mc-ico{font-size:4.8rem;}
+.mode-card .mc-t{font-size:1.9rem;font-weight:800;margin-top:12px;}
+.mode-card .mc-d{font-size:1rem;color:rgba(255,255,255,.7);margin-top:10px;line-height:1.6;}
+
+/* ──── LOGIN ──── */
+#screen-login{flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.78);}
+.login-box{background:rgba(255,255,255,.1);backdrop-filter:blur(12px);border:2px solid rgba(255,255,255,.25);
+  border-radius:20px;padding:30px;width:90%;max-width:380px;display:flex;flex-direction:column;gap:14px;}
+.inp{font-size:1.2rem;padding:12px 16px;border-radius:12px;border:2px solid rgba(255,255,255,.3);
+  background:rgba(255,255,255,.1);color:#fff;font-family:inherit;width:100%;}
+.inp::placeholder{color:rgba(255,255,255,.45);}
+.inp:focus{outline:none;border-color:#4A80E8;}
+.lbl{color:#4A80E8;font-weight:800;font-size:.95rem;margin-bottom:-6px;}
+
+/* Generic title */
+.game-title{font-size:clamp(2.2rem,7vw,4.5rem);font-weight:800;color:#F0F4FF;text-align:center;
+  text-shadow:0 0 30px #1A4FBB,0 0 60px #A8C4FF;animation:glow 2s ease-in-out infinite;}
+@keyframes glow{0%,100%{text-shadow:0 0 30px #1A4FBB,0 0 60px #A8C4FF;}
+  50%{text-shadow:0 0 55px #1A4FBB,0 0 110px #A8C4FF,0 0 160px #4A80E8;}}
+
+/* ──── INTRO ──── */
+#screen-intro{flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.55);}
+.mode-badge{background:rgba(0,0,0,.4);border:2px solid rgba(255,255,255,.3);border-radius:30px;
+  padding:6px 18px;color:#fff;font-size:.95rem;font-weight:800;}
+.mode-badge .on{color:#6bcb77;}.mode-badge .off{color:#4cc9f0;}
+.lb-box{background:rgba(255,255,255,.1);backdrop-filter:blur(12px);border:2px solid rgba(255,255,255,.25);
+  border-radius:20px;padding:18px 28px;min-width:330px;}
+.lb-box h3{color:#A8C4FF;text-align:center;font-size:1.1rem;margin-bottom:12px;}
+.lb-row{display:flex;align-items:center;color:#fff;padding:5px 0;font-size:.98rem;border-bottom:1px solid rgba(255,255,255,.1);}
+.lb-rank{width:32px;color:#A8C4FF;}
+.lb-name{flex:1;padding:0 8px;}
+.lb-score{color:#6bcb77;font-weight:800;}
+.lb-date{color:rgba(255,255,255,.35);font-size:.78rem;margin-left:8px;}
+
+/* ──── NAME ──── */
+#screen-name{flex-direction:column;align-items:center;justify-content:center;gap:18px;background:rgba(0,0,0,.75);}
+.name-prompt{color:#fff;font-size:clamp(1.3rem,3.5vw,2.2rem);font-weight:800;text-align:center;}
+.mic-wrap{font-size:5rem;animation:micpulse 1s ease-in-out infinite;}
+@keyframes micpulse{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
+#rec-name{color:#A8C4FF;font-size:clamp(1.8rem,5vw,3.5rem);font-weight:800;min-height:55px;text-align:center;}
+
+/* ──── STAGE SELECT ──── */
+#screen-stage{flex-direction:column;align-items:center;justify-content:center;gap:20px;background:rgba(0,0,0,.6);padding:20px;}
+.stage-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;width:90%;max-width:600px;}
+.s-btn{background:rgba(255,255,255,.13);backdrop-filter:blur(8px);border:3px solid rgba(255,255,255,.28);
+  border-radius:20px;padding:24px 10px;color:#fff;cursor:pointer;text-align:center;transition:all .2s;font-family:inherit;}
+.s-btn:hover,.s-btn.sel{background:linear-gradient(135deg,#102D7A,#1A4FBB);border-color:rgba(168,196,255,.6);transform:scale(1.05);}
+.s-btn .sn{font-size:1.9rem;font-weight:800;}
+.s-btn .sd{font-size:1rem;margin-top:6px;}
+.s-btn .sp{font-size:.92rem;color:#A8C4FF;margin-top:4px;}
+.s-btn.sel .sp{color:#E8F0FF;}
+
+/* ──── ANALYSIS ──── */
+#screen-analysis{flex-direction:column;align-items:flex-start;justify-content:flex-start;
+  background:rgba(0,0,0,.88);overflow-y:auto;padding:20px 24px;gap:0;}
+.an-header{width:100%;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;}
+.an-title{color:#fff;font-size:clamp(1.3rem,3vw,1.8rem);font-weight:800;}
+.an-scope{color:rgba(255,255,255,.6);font-size:.9rem;margin-top:2px;}
+.an-filter{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;}
+.an-filter select{padding:8px 12px;border-radius:10px;border:1.5px solid rgba(255,255,255,.25);background:#2a2a3e;color:#fff;font-size:.95rem;font-family:inherit;font-weight:700;cursor:pointer;}
+.an-filter select option{background:#2a2a3e;color:#fff;}
+.an-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;width:100%;margin-bottom:24px;}
+.an-stat{background:rgba(76,201,240,.1);border:1.5px solid rgba(76,201,240,.3);border-radius:14px;padding:16px;text-align:center;}
+.an-stat .sv{font-size:1.8rem;font-weight:800;color:#4cc9f0;line-height:1;}
+.an-stat .sl{color:rgba(255,255,255,.6);font-size:.82rem;margin-top:4px;}
+.an-section{width:100%;margin-bottom:24px;}
+.an-section h3{color:#fff;font-size:1.1rem;margin-bottom:12px;}
+.an-table-wrap{overflow-x:auto;width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.12);}
+.an-table{width:100%;border-collapse:collapse;color:#fff;font-size:.88rem;}
+.an-table thead tr{background:rgba(76,201,240,.15);border-bottom:2px solid rgba(76,201,240,.4);}
+.an-table th{padding:10px 8px;text-align:center;white-space:nowrap;font-weight:800;}
+.an-table th:first-child{text-align:left;}
+.an-table td{padding:9px 8px;text-align:center;border-bottom:1px solid rgba(255,255,255,.07);}
+.an-table td:first-child{text-align:left;font-weight:700;}
+.an-table tbody tr:hover{background:rgba(255,255,255,.04);}
+.an-wrong-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;width:100%;}
+.an-wrong-card{background:rgba(255,107,107,.18);border:1.5px solid rgba(255,107,107,.35);border-radius:10px;padding:12px;text-align:center;}
+.an-wrong-card .ww{font-size:1.2rem;font-weight:800;margin-bottom:2px;}
+.an-wrong-card .wc{color:rgba(255,255,255,.55);font-size:.8rem;}
+.an-empty{color:rgba(255,255,255,.4);text-align:center;padding:32px;font-size:1rem;}
+
+/* ──── COUNTDOWN ──── */
+#screen-countdown{align-items:center;justify-content:center;background:rgba(0,0,0,.7);}
+#countdown-num{font-size:clamp(8rem,25vw,18rem);font-weight:800;color:#A8C4FF;text-shadow:0 0 60px #4A80E8,0 0 120px #A8C4FF;animation:popIn .4s ease-out;}
+@keyframes popIn{from{transform:scale(2);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+/* ──── GAME ──── */
+#screen-game{display:block;}
+.hud-timer{position:absolute;top:16px;left:16px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);
+  border-radius:14px;padding:9px 18px;color:#fff;font-size:clamp(1.4rem,3.5vw,2.2rem);font-weight:800;z-index:20;border:2px solid rgba(255,255,255,.28);}
+.hud-timer.warn{animation:twarn .5s ease-in-out infinite;border-color:#ff6b6b;}
+@keyframes twarn{0%,100%{background:rgba(0,0,0,.6);}50%{background:rgba(200,30,30,.65);}}
+.hud-stage{position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(7,14,46,.75);backdrop-filter:blur(6px);
+  border-radius:14px;padding:7px 18px;color:#A8C4FF;font-size:1rem;font-weight:800;z-index:20;border:2px solid rgba(168,196,255,.35);white-space:nowrap;}
+.hud-player{position:absolute;top:16px;right:16px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);
+  border-radius:14px;padding:9px 18px;color:#fff;text-align:right;z-index:20;border:2px solid rgba(255,255,255,.28);}
+.hud-pname{font-size:clamp(.9rem,2.2vw,1.3rem);font-weight:800;color:#A8C4FF;}
+.hud-pscore{font-size:clamp(1.4rem,3.5vw,2.2rem);font-weight:800;color:#6bcb77;}
+/* 제시어 — 1단계 HUD 바로 아래 고정 */
+.instruction{position:absolute;top:62px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:15;width:max-content;max-width:88vw;}
+.ins-label{color:rgba(255,255,255,.82);font-size:clamp(.72rem,1.5vw,.98rem);font-weight:800;margin-bottom:4px;}
+.ins-word{background:linear-gradient(135deg,rgba(255,107,107,.92),rgba(255,217,61,.92));backdrop-filter:blur(10px);
+  border-radius:16px;padding:9px 26px;color:#fff;font-size:clamp(2rem,5.5vw,4rem);font-weight:800;border:3px solid rgba(255,255,255,.5);
+  box-shadow:0 0 32px rgba(255,107,107,.55),0 0 64px rgba(255,217,61,.3);animation:iglow 1.5s ease-in-out infinite;text-shadow:0 2px 8px rgba(0,0,0,.3);}
+@keyframes iglow{0%,100%{box-shadow:0 0 32px rgba(255,107,107,.55),0 0 64px rgba(255,217,61,.3);}
+  50%{box-shadow:0 0 55px rgba(255,107,107,.85),0 0 110px rgba(255,217,61,.6);}}
+.ins-sub{color:rgba(255,255,255,.78);font-size:clamp(.72rem,1.5vw,.98rem);font-weight:800;margin-top:5px;}
+.hud-prog{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.75);font-size:1rem;font-weight:800;z-index:20;white-space:nowrap;}
+#game-field{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:12;}
+/* ── 비눗방울 떨어지는 단어 ── */
+.fw{position:absolute;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;pointer-events:all;animation:fallDown linear forwards;white-space:nowrap;
+  font-size:clamp(1.4rem,3.2vw,2.4rem);font-weight:800;color:#fff;
+  text-shadow:0 1px 6px rgba(0,0,40,.75);
+  border-radius:50%;min-width:130px;min-height:130px;padding:0 30px;
+  border:2.5px solid rgba(255,255,255,.72);
+  background:radial-gradient(circle at 33% 28%,rgba(255,255,255,.72) 0%,rgba(190,230,255,.28) 38%,rgba(120,190,255,.1) 68%,transparent 100%);
+  box-shadow:0 0 18px rgba(160,210,255,.38),inset 0 2px 8px rgba(255,255,255,.42),inset 0 -2px 5px rgba(120,180,255,.18);}
+.fw::before{content:'';position:absolute;top:10%;left:20%;width:32%;height:18%;
+  background:rgba(255,255,255,.52);border-radius:50%;filter:blur(3px);pointer-events:none;}
+.fw:hover{transform:scale(1.1);filter:brightness(1.18);}
+.fw:active{transform:scale(.94);}
+@keyframes fallDown{from{top:-120px;opacity:1;}to{top:108vh;opacity:.5;}}
+@keyframes bubblePop{
+  0%{transform:scale(1);opacity:1;}
+  35%{transform:scale(1.55);opacity:.75;}
+  75%{transform:scale(2.3);opacity:.2;}
+  100%{transform:scale(2.8);opacity:0;}}
+.fw.popping{animation:bubblePop .28s ease-out forwards!important;pointer-events:none;
+  border-color:rgba(255,240,100,.9);
+  box-shadow:0 0 40px rgba(255,220,50,.85),0 0 80px rgba(255,200,50,.45);}
+/* 오답 깜박임 — 0.3초 또렷한 1회 */
+@keyframes wrongFlash{
+  0%   {opacity:0;}
+  50%  {opacity:1;}
+  100% {opacity:0;}
+}
+@keyframes wrongFlashScreen{
+  0%{background:rgba(220,20,20,.45);}
+  100%{background:rgba(220,20,20,0);}
+}
+.fw.fw-wrong{pointer-events:none!important;}
+.fw.fw-wrong::after{
+  content:'';position:absolute;top:0;left:0;right:0;bottom:0;border-radius:50%;
+  background:rgba(210,10,10,.92);
+  animation:wrongFlash .3s ease forwards;
+  pointer-events:none;z-index:5;}
+.pop-txt{position:fixed;pointer-events:none;z-index:300;font-size:2.2rem;font-weight:800;color:#A8C4FF;text-shadow:0 0 18px #1A4FBB;transform:translate(-50%,-50%);animation:popout .55s ease-out forwards;}
+@keyframes popout{0%{transform:translate(-50%,-50%) scale(.5);opacity:1;}55%{transform:translate(-50%,-60%) scale(2);opacity:1;}100%{transform:translate(-50%,-100%) scale(2.5);opacity:0;}}
+/* 정답 +점수 팝업 */
+.score-pop{position:fixed;pointer-events:none;z-index:320;font-weight:900;font-size:clamp(2.2rem,5.5vw,3.6rem);color:#7CFF9B;text-shadow:0 0 20px #00e676,0 3px 8px rgba(0,0,0,.6);}
+@keyframes scorePop{0%{transform:translate(-50%,-50%) scale(.5);opacity:0;}25%{transform:translate(-50%,-75%) scale(1.25);opacity:1;}70%{opacity:1;}100%{transform:translate(-50%,-170%) scale(1.1);opacity:0;}}
+.particle{position:fixed;width:11px;height:11px;border-radius:50%;pointer-events:none;z-index:300;}
+@keyframes pfly{0%{transform:translate(0,0) scale(1);opacity:1;}100%{transform:translate(var(--tx),var(--ty)) scale(0);opacity:0;}}
+#flash-overlay{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:400;display:none;}
+@keyframes flashAnim{0%{background:rgba(255,255,120,.45);}100%{background:rgba(255,255,120,0);}}
+#combo-disp{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:350;color:#A8C4FF;font-size:clamp(2.5rem,7vw,5rem);font-weight:800;text-shadow:0 0 24px #1A4FBB,0 0 48px #A8C4FF;display:none;}
+@keyframes comboAnim{0%{transform:translate(-50%,-50%) scale(.5);opacity:1;}50%{transform:translate(-50%,-65%) scale(1.3);opacity:1;}100%{transform:translate(-50%,-110%) scale(1);opacity:0;}}
+/* 손동작 인식 커서 */
+.finger-cursor{position:fixed;width:52px;height:52px;border-radius:50%;border:4px solid #4A80E8;
+  background:rgba(74,128,232,.22);transform:translate(-50%,-50%);pointer-events:none;z-index:360;
+  box-shadow:0 0 22px #4A80E8,inset 0 0 14px rgba(74,128,232,.55);display:none;transition:left .04s linear,top .04s linear;}
+.finger-cursor::after{content:'✋';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.3rem;}
+/* 제스처 선택 가능한 버튼 */
+.gesture-btn.gesture-hover{
+  transform:scale(1.12)!important;
+  border-color:#4A80E8!important;
+  box-shadow:0 0 0 4px rgba(74,128,232,.85),0 0 28px rgba(74,128,232,.6)!important;
+  animation:dwellGlow .7s ease-in-out forwards!important;}
+@keyframes dwellGlow{
+  0%{outline:none;box-shadow:0 0 0 0 rgba(74,128,232,.3);}
+  60%{box-shadow:0 0 0 6px rgba(74,128,232,.7),0 0 32px rgba(74,128,232,.5);}
+  100%{box-shadow:0 0 0 10px rgba(74,128,232,.9),0 0 40px rgba(74,128,232,.8);}}
+.gesture-btn.gesture-clicked{
+  transform:scale(.9)!important;
+  filter:brightness(1.4);
+  transition:transform .12s,filter .12s;}
+
+/* ──── 속담 퀴즈판 (동서남북 4지선다) ──── */
+#quiz-board{position:absolute;top:62px;left:0;width:100%;height:calc(100% - 62px);z-index:12;
+  display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;
+  align-items:center;justify-items:center;gap:6px;padding:10px;box-sizing:border-box;}
+.quiz-center{grid-column:2;grid-row:2;width:100%;max-width:440px;text-align:center;pointer-events:none;
+  background:rgba(7,14,46,.88);backdrop-filter:blur(12px);
+  border:2px solid rgba(40,85,200,.65);border-radius:14px;padding:16px 20px;
+  box-shadow:0 8px 32px rgba(0,0,0,.65),0 0 0 1px rgba(168,196,255,.2);}
+.qc-label{color:#A8C4FF;font-size:clamp(.78rem,1.8vw,1.05rem);font-weight:800;margin-bottom:8px;letter-spacing:.08em;}
+.qc-label::before{content:'◈ ';}
+.qc-label::after{content:' ◈';}
+.qc-mean{color:#F0F4FF;font-size:clamp(.95rem,2.4vw,1.6rem);font-weight:800;line-height:1.45;text-shadow:0 2px 10px rgba(0,0,0,.9);}
+.qc-sub{color:rgba(168,196,255,.65);font-size:clamp(.75rem,1.6vw,.95rem);font-weight:800;margin-top:10px;}
+/* ── 보기 카드: 청화백자(靑華白磁) — 백자 흰색 + 코발트 테두리 ── */
+.opt-card{width:100%;max-width:380px;min-height:110px;
+  background:linear-gradient(155deg,#F5F2E8,#EAE5D5);
+  border:3px solid rgba(26,58,138,.55);border-radius:10px;padding:12px 16px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  cursor:pointer;pointer-events:all;color:#0D1B4A;
+  box-shadow:0 8px 28px rgba(0,0,20,.55),inset 0 1px 0 rgba(255,255,255,.85);
+  transition:transform .12s,filter .12s,border-color .12s;}
+.opt-card:hover{transform:scale(1.05);border-color:rgba(26,64,200,.95);filter:brightness(1.08);}
+.opt-card:active{transform:scale(.96);}
+.oc-n{grid-column:2;grid-row:1;}
+.oc-e{grid-column:3;grid-row:2;}
+.oc-s{grid-column:2;grid-row:3;}
+.oc-w{grid-column:1;grid-row:2;}
+/* 번호: 코발트 원형 배지 */
+.oc-num{display:inline-flex;align-items:center;justify-content:center;
+  width:clamp(1.55rem,3vw,1.9rem);height:clamp(1.55rem,3vw,1.9rem);
+  background:rgba(26,58,138,.9);border:1.5px solid rgba(168,196,255,.6);border-radius:50%;
+  font-size:clamp(.82rem,1.9vw,1.15rem);font-weight:900;color:#fff;line-height:1;margin-bottom:2px;}
+.oc-i{font-size:clamp(.82rem,1.9vw,1.25rem);font-weight:800;letter-spacing:.04em;color:#0D1B4A;}
+.oc-h{font-size:clamp(.85rem,2vw,1.3rem);font-weight:700;color:rgba(26,58,138,.85);}
+.opt-card.correct{background:linear-gradient(135deg,#1a7a3c,#2ecc71)!important;border-color:rgba(46,204,113,.9)!important;animation:ocPop .45s ease;}
+.opt-card.correct .oc-i,.opt-card.correct .oc-h{color:#fff!important;}
+.opt-card.wrong{background:linear-gradient(135deg,#5C0808,#8B0000)!important;border-color:rgba(140,0,0,.5)!important;opacity:.5;animation:ocShake .4s ease;pointer-events:none;}
+.opt-card.wrong .oc-i,.opt-card.wrong .oc-h{color:#fff!important;}
+.opt-card.done{pointer-events:none;}
+@keyframes ocPop{0%{transform:scale(1);}45%{transform:scale(1.18);}100%{transform:scale(1);}}
+@keyframes ocShake{0%,100%{transform:translateX(0);}25%{transform:translateX(-9px);}75%{transform:translateX(9px);}}
+.gesture-btn.gesture-hover.opt-card{transform:scale(1.08)!important;}
+
+/* ──── STAGE END ──── */
+#screen-end{flex-direction:column;align-items:center;justify-content:center;gap:18px;background:rgba(0,0,0,.87);}
+.end-title{font-size:clamp(2rem,6vw,4rem);font-weight:800;color:#A8C4FF;text-shadow:0 0 30px #A8C4FF,0 0 60px #1A4FBB;animation:glow 1s ease-in-out infinite;}
+.end-score{font-size:clamp(1.3rem,3.5vw,2.5rem);color:#fff;}
+.end-score span{color:#6bcb77;font-weight:800;}
+.end-opts{display:flex;flex-direction:column;gap:16px;width:90%;max-width:420px;margin-top:10px;}
+.opt-btn{padding:20px;border-radius:16px;border:none;font-size:clamp(1.1rem,2.6vw,1.5rem);font-weight:800;cursor:pointer;transition:transform .1s;font-family:inherit;}
+.opt-btn:active{transform:scale(.95);}
+.opt-a{background:linear-gradient(135deg,#6bcb77,#4cc9f0);color:#fff;}
+.opt-b{background:linear-gradient(135deg,#ffd93d,#ff6b6b);color:#fff;}
+.opt-c{background:rgba(255,255,255,.18);color:#fff;border:2px solid rgba(255,255,255,.35);}
+
+/* ──── SETTINGS ──── */
+#screen-settings{flex-direction:column;align-items:flex-start;background:rgba(0,0,15,.97);padding:28px;overflow-y:auto;gap:18px;}
+.set-title{color:#ffd93d;font-size:1.8rem;font-weight:800;}
+.set-sec{background:rgba(255,255,255,.07);border-radius:14px;padding:18px;width:100%;max-width:680px;border:1px solid rgba(255,255,255,.14);}
+.set-sec h4{color:#4cc9f0;font-size:1.05rem;margin-bottom:12px;}
+.gmb{border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:rgba(255,255,255,.04);}
+.gmb:last-child{margin-bottom:0;}
+.gmb-title{color:#ffd93d;font-weight:800;font-size:1rem;margin-bottom:10px;}
+.gmb .set-row{flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.gmb-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.gmb-group{color:#4cc9f0;font-weight:800;font-size:.95rem;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid rgba(76,201,240,.25);}
+.set-divider{border:none;border-top:1px solid rgba(255,255,255,.12);margin:18px 0;}
+.cls-grid{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 10px;}
+.cls-btn{padding:5px 11px;border-radius:8px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.cls-btn.sel{background:rgba(76,201,240,.35);border-color:#4cc9f0;color:#fff;}
+.cls-code-lbl{font-size:.82rem;color:#ffd93d;font-weight:700;margin-bottom:4px;}
+.set-sec p{color:rgba(255,255,255,.62);font-size:.88rem;line-height:1.6;margin-bottom:12px;}
+.upload-zone{border:2px dashed rgba(255,255,255,.3);border-radius:10px;padding:26px;text-align:center;cursor:pointer;color:rgba(255,255,255,.6);transition:all .2s;}
+.upload-zone:hover{border-color:rgba(255,217,61,.6);background:rgba(255,217,61,.05);}
+.word-preview{display:flex;flex-wrap:wrap;gap:7px;max-height:130px;overflow-y:auto;margin-top:9px;}
+.wtag{background:rgba(255,255,255,.1);border-radius:7px;padding:3px 10px;color:#fff;font-size:.88rem;}
+#excel-status{color:#6bcb77;margin-top:9px;font-size:.95rem;}
+.set-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.set-inp{font-size:1rem;padding:10px 14px;border-radius:10px;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font-family:inherit;flex:1;min-width:160px;}
+.set-inp:focus{outline:none;border-color:#ffd93d;}
+.set-lbl{color:#ffd93d;font-weight:800;font-size:.9rem;display:block;margin-bottom:6px;margin-top:10px;}
+.status-line{margin-top:10px;font-size:.92rem;color:#6bcb77;min-height:20px;}
+details.guide{margin-top:14px;background:rgba(0,0,0,.3);border-radius:10px;padding:12px 14px;}
+details.guide summary{color:#ffd93d;font-weight:800;cursor:pointer;font-size:.95rem;}
+details.guide ol{color:rgba(255,255,255,.75);font-size:.85rem;line-height:1.8;margin:12px 0 12px 18px;}
+details.guide pre{background:#0a0a14;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:12px;
+  color:#a8e6a1;font-size:.74rem;overflow-x:auto;white-space:pre;line-height:1.5;font-family:'Consolas','Courier New',monospace;}
+.toggle-wrap{display:flex;align-items:center;gap:10px;color:#fff;font-weight:800;margin-top:12px;}
+.toggle-wrap input{width:22px;height:22px;accent-color:#6bcb77;}
+.gate-box{display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;width:100%;max-width:360px;margin:auto;}
+.warn-text{color:#ffb3b3;font-size:.82rem;}
+
+/* ──── GROWTH CHART ──── */
+#an-growth-chart{display:block;width:100%;border-radius:10px;cursor:default;}
+/* ──── PIN STRENGTH ──── */
+.pw-strength-bar{height:5px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:7px;overflow:hidden;}
+.pw-strength-fill{height:100%;border-radius:3px;width:0;transition:width .35s,background .35s;}
+.pw-strength-lbl{font-size:.8rem;margin-top:4px;}
+
+/* ──── SCOPE SELECT ──── */
+#screen-scope{flex-direction:column;align-items:center;justify-content:center;gap:22px;background:rgba(0,0,0,.84);}
+.scope-cards{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;}
+.scope-card{background:rgba(255,255,255,.1);backdrop-filter:blur(12px);border:3px solid rgba(255,255,255,.28);
+  border-radius:26px;padding:32px 26px;min-width:172px;cursor:pointer;text-align:center;color:#fff;transition:all .2s;}
+.scope-card:hover{transform:translateY(-4px) scale(1.04);border-color:#4cc9f0;background:rgba(76,201,240,.12);}
+.scope-card .sc-ico{font-size:3.6rem;}
+.scope-card .sc-t{font-size:1.6rem;font-weight:800;margin-top:10px;}
+.scope-card .sc-d{font-size:.95rem;color:rgba(255,255,255,.65);margin-top:8px;line-height:1.5;}
+.grade-grid{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;}
+.grd-btn{padding:16px 32px;border-radius:18px;border:2px solid rgba(255,255,255,.3);
+  background:rgba(255,255,255,.1);color:#fff;font-size:1.25rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s;}
+.grd-btn.sel,.grd-btn:hover{background:linear-gradient(135deg,#4cc9f0,#4361ee);border-color:transparent;}
+.scope-step{display:none;flex-direction:column;align-items:center;gap:16px;width:90%;max-width:460px;}
+</style>
+</head>
+<body>
+
+<video id="video" autoplay playsinline muted></video>
+<div class="cam-tint"></div>
+<div id="flash-overlay"></div>
+<div id="wrong-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(210,10,10,0.55);z-index:9990;pointer-events:none;"></div>
+<div id="combo-disp"></div>
+<div id="settingsWrap">
+  <span id="modeBadgeSm"></span>
+  <button id="settingsBtn" onclick="openSettings()">⚙️</button>
+</div>
+<button id="settingsLogoutBtn" class="gesture-btn" onclick="closeSettings()" style="display:none;">🔓 로그아웃</button>
+
+<!-- ══ MODE SELECT ══ -->
+<div class="screen" id="screen-mode">
+  <div class="game-title" style="margin-bottom:10px;">📖 알쏭달쏭 속담 퀴즈 📖</div>
+  <div style="color:rgba(255,255,255,.8);font-weight:800;">시작 방식을 선택하세요</div>
+  <div class="mode-cards">
+    <div class="mode-card gesture-btn" onclick="chooseOffline()">
+      <div class="mc-ico">💻</div>
+      <div class="mc-t">오프라인</div>
+      <div class="mc-d">이 기기에만 기록 저장<br>설정 없이 바로 시작</div>
+    </div>
+    <div class="mode-card gesture-btn" onclick="chooseOnline()">
+      <div class="mc-ico">☁️</div>
+      <div class="mc-t">온라인</div>
+      <div class="mc-d">학교이름 또는 코드로 시작<br>구글 드라이브 연동 가능</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ONLINE LOGIN ══ -->
+<div class="screen" id="screen-login">
+  <div class="game-title" style="font-size:clamp(1.8rem,5vw,3rem);">☁️ 온라인 시작</div>
+  <div id="login-tabs" style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;flex-wrap:wrap;">
+    <button id="tab-student" class="login-tab gesture-btn active" onclick="switchLoginTab('student')" style="padding:10px 22px;border:none;border-radius:24px;background:rgba(255,255,255,.25);color:#fff;font-weight:800;cursor:pointer;transition:all .2s;">👦 학생 참여</button>
+    <button id="tab-code" class="login-tab gesture-btn" onclick="switchLoginTab('code')" style="padding:10px 22px;border:none;border-radius:24px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);font-weight:800;cursor:pointer;transition:all .2s;">📲 참여코드</button>
+  </div>
+  <div class="login-box">
+    <!-- 경로 1: 학생 — 학교이름 입력 후 범위 선택 -->
+    <div id="panel-student" class="login-panel">
+      <div style="color:rgba(255,255,255,.55);font-size:.82rem;margin-bottom:4px;">📌 학교 이름을 입력하고 참여 범위를 선택하세요</div>
+      <div><span class="lbl">학교 이름</span></div>
+      <input class="inp" id="student-school" type="text" placeholder="예: OO초등학교" autocomplete="off">
+      <button class="btn btn-primary gesture-btn" style="margin-top:4px;" onclick="submitStudentLogin()">참여하기 →</button>
+      <div style="color:rgba(255,220,80,.75);font-size:.8rem;margin-top:6px;text-align:center;">
+        💡 QR 코드 스캔 시 학교이름·범위가 자동 설정됩니다
+      </div>
+    </div>
+    <!-- 경로 3: 참여코드 직접 입력 (QR 불가 시 대비) -->
+    <div id="panel-code" class="login-panel" style="display:none;">
+      <div style="color:rgba(255,255,255,.55);font-size:.82rem;margin-bottom:4px;">📌 선생님께 받은 참여코드를 입력하세요</div>
+      <div><span class="lbl">참여코드</span></div>
+      <input class="inp" id="code-input" type="text" placeholder="예: ABCD"
+        maxlength="20" autocomplete="off" spellcheck="false"
+        style="font-size:2rem;text-align:center;letter-spacing:.4em;font-weight:900;text-transform:uppercase;"
+        oninput="this.value=this.value.toUpperCase()">
+      <div id="code-err" style="color:#ff9999;font-size:.9rem;min-height:18px;text-align:center;"></div>
+      <button class="btn btn-primary gesture-btn" onclick="applySchoolCode()">코드 적용 →</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-ghost btn-sm gesture-btn" onclick="show('mode')">← 뒤로</button>
+      <button class="btn btn-ghost btn-sm gesture-btn" onclick="show('mode')">🏠 홈</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCOPE SELECT ══ -->
+<div class="screen" id="screen-scope">
+  <div class="game-title" style="font-size:clamp(1.6rem,4vw,2.8rem);" id="scope-school-nm"></div>
+  <div style="color:rgba(255,255,255,.8);font-weight:800;font-size:1.1rem;">데이터 범위를 선택하세요</div>
+
+  <div id="sc-s1" class="scope-cards">
+    <div class="scope-card gesture-btn" onclick="scStep1('전체')"><div class="sc-ico">🏫</div><div class="sc-t">전체</div><div class="sc-d">학교 전체<br>통합 데이터</div></div>
+    <div class="scope-card gesture-btn" onclick="scStep1('학년')"><div class="sc-ico">📚</div><div class="sc-t">학년</div><div class="sc-d">학년별<br>데이터</div></div>
+    <div class="scope-card gesture-btn" onclick="scStep1('반')"><div class="sc-ico">🏠</div><div class="sc-t">학년반</div><div class="sc-d">우리 반<br>데이터</div></div>
+  </div>
+
+  <div id="sc-s2" class="scope-step">
+    <div style="color:#ffd93d;font-weight:800;font-size:1.1rem;" id="sc-s2-lbl">학년을 선택하세요</div>
+    <div class="grade-grid">
+      <button class="grd-btn gesture-btn" onclick="scGrade(1)">1학년</button>
+      <button class="grd-btn gesture-btn" onclick="scGrade(2)">2학년</button>
+      <button class="grd-btn gesture-btn" onclick="scGrade(3)">3학년</button>
+      <button class="grd-btn gesture-btn" onclick="scGrade(4)">4학년</button>
+      <button class="grd-btn gesture-btn" onclick="scGrade(5)">5학년</button>
+      <button class="grd-btn gesture-btn" onclick="scGrade(6)">6학년</button>
+    </div>
+    <button class="btn btn-ghost btn-sm gesture-btn" onclick="scBack(2)">← 뒤로</button>
+  </div>
+
+  <div id="sc-s3" class="scope-step">
+    <div style="color:#ffd93d;font-weight:800;font-size:1.1rem;" id="sc-s3-lbl">반을 선택하세요</div>
+    <div class="grade-grid" id="sc-cls-grid"></div>
+    <button class="btn btn-ghost btn-sm gesture-btn" onclick="scBack(3)">← 뒤로</button>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:4px;">
+    <button class="btn btn-ghost btn-sm gesture-btn" onclick="show('login')">← 학교 변경</button>
+    <button class="btn btn-ghost btn-sm gesture-btn" onclick="show('mode')">🏠 홈</button>
+  </div>
+</div>
+
+<!-- ══ INTRO ══ -->
+<div class="screen" id="screen-intro">
+  <div class="game-title">📖 알쏭달쏭 속담 퀴즈 📖</div>
+  <div class="mode-badge" id="mode-badge"></div>
+  <div class="lb-box">
+    <h3 id="lb-title">🏆 명예의 전당 (상위 5명)</h3>
+    <div id="lb-list"><div style="color:rgba(255,255,255,.5);text-align:center;">아직 기록이 없어요!</div></div>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+    <button class="btn btn-primary gesture-btn" onclick="goNameScreen()">🎯 게임 시작!</button>
+    <button class="btn btn-ghost btn-sm gesture-btn" onclick="show('mode')">🏠 홈</button>
+  </div>
+</div>
+
+<!-- ══ NAME ══ -->
+<div class="screen" id="screen-name">
+  <div class="name-prompt">게임 참여자 이름을 말해주세요! 🎤</div>
+  <div class="mic-wrap" id="mic-icon">🎤</div>
+  <div id="rec-name">듣는 중...</div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;">
+    <button class="btn btn-ghost gesture-btn" onclick="restartVoice()">🔄 다시 말하기</button>
+    <button class="btn btn-primary gesture-btn" id="confirm-btn" style="display:none;" onclick="confirmName()">확인 ✓</button>
+    <button class="btn btn-ghost btn-sm gesture-btn" onclick="show('mode')">🏠 홈</button>
+  </div>
+</div>
+
+<!-- ══ STAGE SELECT ══ -->
+<div class="screen" id="screen-stage">
+  <div style="color:#fff;font-size:clamp(1.1rem,2.8vw,1.7rem);font-weight:800;">
+    <span id="pname-disp" style="color:#ffd93d;"></span>님, 단계를 선택하세요! 👇
+  </div>
+
+  <!-- 3열 레이아웃: [게임시작 열] [단계 그리드] [홈 열] -->
+  <div style="display:flex;gap:12px;width:94%;max-width:660px;align-items:flex-start;">
+
+    <!-- 왼쪽: 1행 ghost + 게임시작 버튼 -->
+    <div style="display:flex;flex-direction:column;gap:18px;flex-shrink:0;">
+      <!-- ghost: 1단계 높이만큼 공간 확보 → 게임시작이 3단계 높이에 위치 -->
+      <div class="s-btn" style="visibility:hidden;pointer-events:none;" aria-hidden="true">
+        <div class="sn">X</div><div class="sd">X</div><div class="sp">X</div>
+      </div>
+      <button class="s-btn gesture-btn" id="start-btn"
+        style="width:100%;box-sizing:border-box;opacity:.3;pointer-events:none;background:rgba(67,233,123,.18);border-color:rgba(67,233,123,.45);"
+        onclick="beginCountdown()">
+        <div class="sn">게임시작!</div>
+        <div class="sp" style="color:#6bffaa;font-size:1.2rem;margin-top:4px;">🚀</div>
+      </button>
+    </div>
+
+    <!-- 중앙: 저·중·고학년 3단계 -->
+    <div style="flex:1;display:grid;grid-template-columns:1fr;gap:16px;">
+      <div class="s-btn gesture-btn" id="stage-btn-1" onclick="selectStage(1)"><div class="sn">저학년</div><div class="sd">초등 1~2학년</div><div class="sp">정답 +4점 / 오답 -2점</div></div>
+      <div class="s-btn gesture-btn" id="stage-btn-2" onclick="selectStage(2)"><div class="sn">중학년</div><div class="sd">초등 3~4학년</div><div class="sp">정답 +6점 / 오답 -3점</div></div>
+      <div class="s-btn gesture-btn" id="stage-btn-3" onclick="selectStage(3)"><div class="sn">고학년</div><div class="sd">초등 5학년 이상</div><div class="sp">정답 +8점 / 오답 -4점</div></div>
+    </div>
+
+    <!-- 오른쪽: 1행 ghost + 홈 버튼 -->
+    <div style="display:flex;flex-direction:column;gap:18px;flex-shrink:0;">
+      <div class="s-btn" style="visibility:hidden;pointer-events:none;" aria-hidden="true">
+        <div class="sn">X</div><div class="sd">X</div><div class="sp">X</div>
+      </div>
+      <button class="s-btn gesture-btn"
+        style="width:100%;box-sizing:border-box;background:rgba(67,233,123,.18);border-color:rgba(67,233,123,.45);"
+        onclick="show('mode')">
+        <div class="sn">🏠</div>
+        <div class="sp" style="color:#6bffaa;font-size:1.2rem;margin-top:4px;">홈</div>
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ══ COUNTDOWN ══ -->
+<div class="screen" id="screen-countdown"><div id="countdown-num">3</div></div>
+
+<!-- ══ GAME ══ -->
+<div class="screen" id="screen-game">
+  <div class="hud-timer" id="hud-timer">⏱ 60초</div>
+  <div class="hud-stage" id="hud-stage">저학년</div>
+  <div class="hud-player">
+    <div class="hud-pname" id="hud-pname">플레이어</div>
+    <div class="hud-pscore" id="hud-pscore">0점</div>
+  </div>
+  <div id="quiz-board">
+    <div class="quiz-center">
+      <div class="qc-label">이 뜻에 맞는 속담은?</div>
+      <div class="qc-mean" id="qc-mean">뜻</div>
+      <div class="qc-sub" id="qc-sub">( 1 / 20 )</div>
+    </div>
+    <div class="opt-card gesture-btn oc-n" id="opt-0" data-idx="0" onclick="selectOption(0)"></div>
+    <div class="opt-card gesture-btn oc-e" id="opt-1" data-idx="1" onclick="selectOption(1)"></div>
+    <div class="opt-card gesture-btn oc-s" id="opt-2" data-idx="2" onclick="selectOption(2)"></div>
+    <div class="opt-card gesture-btn oc-w" id="opt-3" data-idx="3" onclick="selectOption(3)"></div>
+  </div>
+  <div class="hud-prog" id="hud-prog">남은 문제: 20개</div>
+</div>
+
+<!-- ══ STAGE END ══ -->
+<div class="screen" id="screen-end">
+  <div class="end-title" id="end-title">🎉 단계 완료!</div>
+  <div class="end-score">총 획득 점수: <span id="end-score-val">0</span>점</div>
+  <div style="color:rgba(255,255,255,.7);font-size:1rem;" id="end-words">완료한 단어: 0개</div>
+  <div id="cloud-save-status" style="font-size:.82rem;min-height:18px;color:rgba(255,255,255,.5);"></div>
+  <div class="end-opts">
+    <button class="opt-btn opt-a gesture-btn" onclick="optContinue()">✅ 가. 이어서 하기</button>
+    <button class="opt-btn opt-b gesture-btn" onclick="optNewPlayer()">👤 나. 새로운 게임자 참여</button>
+    <button class="opt-btn opt-c gesture-btn" onclick="optQuit()">🚪 다. 게임 종료</button>
+    <button class="opt-btn gesture-btn" style="background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.3);" onclick="show('mode')">🏠 홈으로</button>
+  </div>
+</div>
+
+<!-- ══ ANALYSIS ══ -->
+<div class="screen" id="screen-analysis">
+  <div class="an-header">
+    <div>
+      <div class="an-title">📊 게임 결과 분석</div>
+      <div class="an-scope" id="an-scope-info"></div>
+      <div id="an-cloud-status" style="font-size:.8rem;color:rgba(255,255,255,.5);margin-top:4px;"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn btn-ghost btn-sm gesture-btn" onclick="closeAnalysis()">← 뒤로</button>
+      <button class="btn btn-ghost btn-sm gesture-btn" onclick="show('mode')">🏠 홈</button>
+    </div>
+  </div>
+
+  <div class="an-filter">
+    <select id="an-filter-stage" onchange="renderAnalysis()">
+      <option value="">모든 단계</option>
+      <option value="1">저학년</option>
+      <option value="2">중학년</option>
+      <option value="3">고학년</option>
+    </select>
+    <select id="an-filter-name" onchange="renderAnalysis()">
+      <option value="">모든 학생</option>
+    </select>
+    <select id="an-sort" onchange="renderAnalysis()">
+      <option value="date">최근 날짜순</option>
+      <option value="score">높은 점수순</option>
+      <option value="name">이름순</option>
+    </select>
+    <button class="btn btn-sm btn-primary gesture-btn" onclick="downloadAsExcel()">📥 엑셀 다운로드</button>
+  </div>
+
+  <!-- 통계 요약 -->
+  <div class="an-stats" id="an-stats"></div>
+
+  <!-- 상세 테이블 -->
+  <div class="an-section">
+    <h3>📋 상세 기록</h3>
+    <div class="an-table-wrap">
+      <table class="an-table">
+        <thead>
+          <tr>
+            <th>이름</th>
+            <th>단계</th>
+            <th>점수</th>
+            <th>완료/전체</th>
+            <th>시간</th>
+            <th>정답률</th>
+            <th>날짜</th>
+          </tr>
+        </thead>
+        <tbody id="an-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 오답 분석 -->
+  <div class="an-section">
+    <h3>❌ 자주 틀리는 속담 (상위 15개)</h3>
+    <div class="an-wrong-grid" id="an-wrong-grid"></div>
+  </div>
+
+  <!-- 성장 추이 차트 -->
+  <div class="an-section" id="an-chart-section" style="display:none;">
+    <h3>📈 학생 성장 추이 (날짜별 정답률)</h3>
+    <canvas id="an-growth-chart" height="200"></canvas>
+    <div id="an-chart-info" style="color:rgba(255,255,255,.45);font-size:.82rem;margin-top:8px;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div class="screen" id="screen-settings">
+  <!-- 잠금 화면 -->
+  <div id="set-lock" class="gate-box">
+    <div class="set-title">🔒 관리자 설정</div>
+    <p style="color:rgba(255,255,255,.65);text-align:center;margin-bottom:16px;">학교명과 관리자 비밀번호를 입력하세요</p>
+    <label style="color:rgba(255,255,255,.75);font-size:.88rem;align-self:flex-start;margin-bottom:4px;">학교 이름</label>
+    <input class="inp" id="gate-school" type="text" placeholder="예: OO초등학교" autocomplete="off">
+    <label style="color:rgba(255,255,255,.75);font-size:.88rem;align-self:flex-start;margin-bottom:4px;margin-top:8px;">관리자 비밀번호 <span style="color:rgba(255,255,255,.4);font-size:.8rem;">(기본값 0000)</span></label>
+    <input class="inp" id="gate-pw" type="password" placeholder="비밀번호" autocomplete="off"
+      onkeydown="if(event.key==='Enter') unlockSettings()">
+    <div style="display:flex;gap:12px;margin-top:4px;">
+      <button class="btn btn-primary btn-sm gesture-btn" onclick="unlockSettings()">확인</button>
+    </div>
+    <div class="warn-text" id="gate-err"></div>
+  </div>
+
+  <!-- 설정 내용 -->
+  <div id="set-content" style="display:none;width:100%;">
+    <div style="width:100%;display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div class="set-title">⚙️ 환경설정</div>
+    </div>
+
+    <!-- ① 학교 설정 -->
+    <div class="set-sec">
+      <h4>🏫 1. 학교 설정</h4>
+      <p style="color:rgba(255,255,255,.62);font-size:.88rem;">학교명 변경 시 아래 항목을 처음 1회 설정하세요.</p>
+
+      <label class="set-lbl">학교 이름</label>
+      <div class="set-row">
+        <input class="set-inp" id="set-school-inp" type="text" placeholder="예: OO초등학교">
+        <button class="btn btn-primary btn-sm gesture-btn" onclick="saveSchoolName()">저장</button>
+      </div>
+      <div class="status-line" id="school-st"></div>
+
+      <hr class="set-divider">
+
+      <label class="set-lbl">🔑 관리자 비밀번호 변경</label>
+      <p style="color:rgba(255,255,255,.62);font-size:.85rem;margin-bottom:10px;">이 환경설정 화면 진입에 사용됩니다.</p>
+      <input class="set-inp" id="pw-cur" type="password" placeholder="현재 비밀번호" autocomplete="off" style="flex:none;width:100%;margin-bottom:8px;">
+      <input class="set-inp" id="pw-new" type="password" placeholder="새 비밀번호 (4자 이상)" autocomplete="off" style="flex:none;width:100%;" oninput="updatePWStrength(this.value)">
+      <div style="width:100%;margin-top:6px;">
+        <div class="pw-strength-bar"><div class="pw-strength-fill" id="pw-strength-fill"></div></div>
+        <div class="pw-strength-lbl" id="pw-strength-lbl" style="color:rgba(255,255,255,.35);">비밀번호를 입력하세요</div>
+      </div>
+      <div style="margin-top:12px;"><button class="btn btn-primary btn-sm gesture-btn" onclick="changeAdminPW()">비밀번호 변경</button></div>
+      <div class="status-line" id="pw-status"></div>
+
+      <hr class="set-divider">
+
+      <label class="set-lbl">☁️ 구글 드라이브(스프레드시트) 연동</label>
+      <p style="color:rgba(255,255,255,.62);font-size:.85rem;margin-bottom:10px;">여러 기기가 같은 학교 기록을 공유할 수 있어요.</p>
+      <input class="set-inp" id="drive-url" type="text" placeholder="https://script.google.com/macros/s/..../exec" autocomplete="off" style="flex:none;width:100%;margin-bottom:8px;">
+      <input class="set-inp" id="drive-secret" type="text" placeholder="저장 비밀번호 (기본값 0000)" autocomplete="off" style="flex:none;width:100%;">
+      <div class="toggle-wrap">
+        <input type="checkbox" id="drive-enabled">
+        <label for="drive-enabled">구글 드라이브 저장 사용하기</label>
+      </div>
+      <div class="set-row" style="margin-top:12px;">
+        <button class="btn btn-primary btn-sm gesture-btn" onclick="saveDrive()">설정 저장</button>
+        <button class="btn btn-ghost btn-sm gesture-btn" onclick="testDrive()">🔌 연결 테스트</button>
+      </div>
+      <div class="status-line" id="drive-status"></div>
+
+      <details class="guide">
+        <summary>📖 설정 방법 (처음 1회)</summary>
+        <ol>
+          <li>학교 구글 계정으로 <b>drive.google.com</b> → 새로 만들기 → <b>Google 스프레드시트</b> 생성</li>
+          <li>스프레드시트 상단 메뉴 <b>확장 프로그램 → Apps Script</b> 클릭</li>
+          <li>기존 코드를 모두 지우고 아래 코드를 붙여넣은 뒤 💾 저장</li>
+          <li>오른쪽 위 <b>배포 → 새 배포</b> → 유형 ⚙️ <b>웹 앱</b> 선택</li>
+          <li>설명 입력 · <b>실행: 나</b> · <b>액세스 권한: 모든 사용자</b> → <b>배포</b></li>
+          <li>표시되는 <b>웹 앱 URL</b>을 복사해 위 칸에 붙여넣기</li>
+          <li>저장 비밀번호는 기본 <b>0000</b> (바꾸려면 코드의 PASSWORD 값 수정)</li>
+          <li>'사용하기' 체크 → <b>설정 저장</b> → <b>연결 테스트</b>로 확인</li>
+        </ol>
+        <pre id="gas-code">// ── GET: 점수 조회 or 참여코드 조회 ──────────────────────
+function doGet(e){
+  var p = e &amp;&amp; e.parameter ? e.parameter : {};
+  // 참여코드 조회: ?action=getCode&amp;code=ABCD
+  if(p.action === "getCode"){
+    var cs = getCodeSheet_();
+    var rows = cs.getDataRange().getValues();
+    for(var i=1;i&lt;rows.length;i++){
+      if(String(rows[i][0]).toUpperCase()===String(p.code).toUpperCase()){
+        return json_({ok:true,
+          school:rows[i][1], scope:rows[i][2],
+          grade:rows[i][3], cls:rows[i][4],
+          url:rows[i][5], pwh:rows[i][6]});
+      }
+    }
+    return json_({ok:false,error:"코드를 찾을 수 없습니다."});
+  }
+  // 기본: 전체점수 시트에서 조회
+  var sh = getScoreSheet_("전체점수");
+  var v = sh.getDataRange().getValues().slice(1);
+  var rows2 = v.map(function(r){
+    return {
+      school:r[0], name:r[1], score:r[2],
+      grade:r[3], cls:r[4],
+      stage:r[5], speed:r[6],
+      wordCount:r[7], totalTarget:r[8],
+      timeSpent:r[9], correctRate:r[10],
+      wrongWords:r[11], completed:r[12], date:r[13]
+    };
+  });
+  return json_({ok:true, rows:rows2});
+}
+
+// ── POST: 점수 저장 or 참여코드 저장 ─────────────────────
+function doPost(e){
+  var PASSWORD = getPassword_();
+  var b;
+  try{ b = JSON.parse(e.postData.contents); }
+  catch(ex){
+    var d = {};
+    e.postData.contents.split("&").forEach(function(pair){
+      var kv=pair.split("=");
+      d[decodeURIComponent(kv[0])]=decodeURIComponent(kv[1]||"");
+    });
+    b=d;
+  }
+  // 비밀번호 동기화: action=setPassword (GAS URL 자체가 인증)
+  if(b.action === "setPassword"){
+    var shs = getSettingsSheet_();
+    var sv = shs.getDataRange().getValues();
+    for(var si=1;si&lt;sv.length;si++){
+      if(sv[si][0]==="password"){shs.getRange(si+1,2).setValue(b.newPassword||"0000");return json_({ok:true});}
+    }
+    shs.appendRow(["password",b.newPassword||"0000"]);
+    return json_({ok:true});
+  }
+  // 참여코드 저장: action=setCode
+  if(b.action === "setCode"){
+    var cs = getCodeSheet_();
+    var rows = cs.getDataRange().getValues();
+    var nScope=String(b.scope||""), nGrade=Number(b.grade)||0, nCls=Number(b.cls)||0;
+    var nSchool=String(b.school||"");
+    for(var i=rows.length-1;i&gt;=1;i--){
+      // 같은 코드 중복 제거
+      var sameCode = String(rows[i][0]).toUpperCase()===String(b.code).toUpperCase();
+      // 같은 범위(학교+학년+반)의 옛 코드 무효화 → 최신 코드만 유효
+      // (학년+반 값이 범위를 유일하게 구분: 학교전체 0/0, N학년 g/0, N학년M반 g/c)
+      var sameScope = String(rows[i][1])===nSchool
+                   &amp;&amp; (Number(rows[i][3])||0)===nGrade
+                   &amp;&amp; (Number(rows[i][4])||0)===nCls;
+      if(sameCode || sameScope) cs.deleteRow(i+1);
+    }
+    cs.appendRow([
+      (b.code||"").toUpperCase(), nSchool, nScope,
+      nGrade, nCls,
+      b.url||"", b.pwh||"",
+      Utilities.formatDate(new Date(),"GMT+9","yyyy-MM-dd HH:mm")
+    ]);
+    return json_({ok:true});
+  }
+  // 범위 데이터 삭제: action=deleteScope
+  // 관련 탭(전체점수·N학년점수·N-M점수)에서 동시 삭제 + 빈 탭 제거
+  if(b.action === "deleteScope"){
+    if(String(b.secret) !== PASSWORD) return json_({ok:false,error:"비밀번호 불일치"});
+    var ss2=SpreadsheetApp.getActiveSpreadsheet();
+    var grade2=Number(b.grade||0), cls2=Number(b.cls||0);
+    var schoolName=String(b.school||"");
+    var sheetNames=[], matchFn;
+    if(b.sc==="반" &amp;&amp; grade2&gt;0 &amp;&amp; cls2&gt;0){
+      // 특정 반: 전체점수 + N학년점수 + N-M점수 에서 (학교+학년+반) 일치 행 삭제
+      matchFn=function(r){return String(r[0])===schoolName &amp;&amp; Number(r[3])===grade2 &amp;&amp; Number(r[4])===cls2;};
+      sheetNames=["전체점수", grade2+"학년점수", grade2+"-"+cls2+"점수"];
+    } else if(b.sc==="학년" &amp;&amp; grade2&gt;0){
+      // 학년 전체: 전체점수 + N학년점수 + N-1..N-10점수 에서 (학교+학년) 일치 행 삭제
+      matchFn=function(r){return String(r[0])===schoolName &amp;&amp; Number(r[3])===grade2;};
+      sheetNames=["전체점수", grade2+"학년점수"];
+      for(var cc=1;cc&lt;=10;cc++) sheetNames.push(grade2+"-"+cc+"점수");
+    } else {
+      // 학교 전체: '점수'로 끝나는 모든 시트에서 (학교) 일치 행 삭제
+      matchFn=function(r){return String(r[0])===schoolName;};
+      var allSh=ss2.getSheets();
+      for(var si=0;si&lt;allSh.length;si++){
+        var nm=allSh[si].getName();
+        if(/점수$/.test(nm)) sheetNames.push(nm);
+      }
+    }
+    var deleted=0;
+    for(var k=0;k&lt;sheetNames.length;k++){
+      var sh2=ss2.getSheetByName(sheetNames[k]);
+      if(!sh2) continue;
+      var rows=sh2.getDataRange().getValues();
+      for(var di=rows.length-1;di&gt;=1;di--){
+        if(matchFn(rows[di])){sh2.deleteRow(di+1);deleted++;}
+      }
+      // 헤더만 남으면 탭 자체 삭제 (마지막 1개 시트는 보존, 점수 저장 시 자동 재생성)
+      if(sh2.getLastRow()&lt;=1 &amp;&amp; ss2.getSheets().length&gt;1) ss2.deleteSheet(sh2);
+    }
+    return json_({ok:true,deleted:deleted});
+  }
+  // 점수 저장
+  if(String(b.secret) !== PASSWORD)
+    return json_({ok:false, error:"비밀번호 불일치"});
+  var grade=Number(b.grade)||0, cls=Number(b.cls)||0;
+  var row=[
+    b.school||"", b.name||"", Number(b.score)||0,
+    grade, cls, b.stage||"", b.speed||"",
+    Number(b.wordCount)||0, Number(b.totalTarget)||20,
+    Number(b.timeSpent)||0, Number(b.correctRate)||0,
+    b.wrongWords||"", Number(b.completed)||0,
+    Utilities.formatDate(new Date(),"GMT+9","yyyy-MM-dd HH:mm")
+  ];
+  getScoreSheet_("전체점수").appendRow(row);          // 항상 전체점수에 저장
+  if(grade&gt;0){
+    getScoreSheet_(grade+"학년점수").appendRow(row);  // 학년별 탭
+    if(cls&gt;0)
+      getScoreSheet_(grade+"-"+cls+"점수").appendRow(row); // 반별 탭
+  }
+  return json_({ok:true});
+}
+
+// ── 시트 헬퍼 ────────────────────────────────────────────
+var SCORE_HDR=["학교","이름","점수","학년","반","단계","속도",
+               "완료단어","목표단어","소요시간(초)","정답률(%)","틀린단어","완료여부","날짜"];
+function getScoreSheet_(name){
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  var sh=ss.getSheetByName(name);
+  if(!sh){sh=ss.insertSheet(name);sh.appendRow(SCORE_HDR);}
+  return sh;
+}
+function getCodeSheet_(){
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  var sh=ss.getSheetByName("코드");
+  if(!sh){sh=ss.insertSheet("코드");
+    sh.appendRow(["코드","학교","범위","학년","반","GAS_URL","PW해시","생성일시"]);}
+  return sh;
+}
+function getSettingsSheet_(){
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  var sh=ss.getSheetByName("설정");
+  if(!sh){sh=ss.insertSheet("설정");sh.appendRow(["키","값"]);sh.appendRow(["password","0000"]);}
+  return sh;
+}
+function getPassword_(){
+  try{
+    var rows=getSettingsSheet_().getDataRange().getValues();
+    for(var i=1;i&lt;rows.length;i++){if(rows[i][0]==="password")return String(rows[i][1]);}
+  }catch(e){}
+  return "0000";
+}
+function json_(o){
+  return ContentService.createTextOutput(JSON.stringify(o))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+        <button class="btn btn-ghost btn-sm gesture-btn" onclick="copyGas()" style="margin-top:10px;">📋 코드 복사</button>
+        <div class="warn-text" style="margin-top:10px;">※ 연동 실패 시에도 점수는 이 기기에 항상 저장됩니다.</div>
+      </details>
+    </div>
+
+    <!-- ② 참여코드 생성 및 결과분석 (온라인 전용) -->
+    <div class="set-sec" id="sec-code-analysis" style="display:none;">
+      <h4>📋 2. 참여코드 생성 및 결과분석</h4>
+
+      <!-- 학교 전체 -->
+      <div class="gmb-group">학교 전체</div>
+      <div class="gmb">
+        <div style="color:rgba(255,255,255,.55);font-size:.82rem;margin-bottom:8px;">※ 학교전체 코드로 참여한 학생은 범위(학년/반)를 직접 선택한 후 입장합니다.</div>
+        <div class="gmb-actions">
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="openScopeAnalysis('전체',0,0)">📊 결과분석</button>
+          <button class="btn btn-sm btn-primary gesture-btn" onclick="generateWholeCode()">🔗 참여코드 생성</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetScopeData('전체',0,0,'whole-status')" style="border-color:rgba(255,100,100,.5);color:#ff9999;">🗑 데이터 초기화</button>
+        </div>
+        <div id="whole-code-area" style="display:none;margin-top:8px;">
+          <div class="set-row">
+            <input id="whole-code-disp" type="text" readonly style="flex:1;font-family:monospace;font-size:.78rem;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.3);color:#fff;">
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="copyScopeCode('whole')">복사</button>
+          </div>
+          <div id="whole-status" style="font-size:.82rem;margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <!-- 학년별 관리 -->
+      <div class="gmb-group">학년별 관리</div>
+
+      <div class="gmb">
+        <div class="gmb-title">학년 선택 후 관리</div>
+        <div class="cls-grid" id="grade-grid">
+          <button class="cls-btn sel gesture-btn" onclick="selectGrade(1)" style="line-height:1.4;padding:6px 10px;"><span style="font-size:.65rem;opacity:.7;display:block;">가</span>1학년</button>
+          <button class="cls-btn gesture-btn" onclick="selectGrade(2)" style="line-height:1.4;padding:6px 10px;"><span style="font-size:.65rem;opacity:.7;display:block;">나</span>2학년</button>
+          <button class="cls-btn gesture-btn" onclick="selectGrade(3)" style="line-height:1.4;padding:6px 10px;"><span style="font-size:.65rem;opacity:.7;display:block;">다</span>3학년</button>
+          <button class="cls-btn gesture-btn" onclick="selectGrade(4)" style="line-height:1.4;padding:6px 10px;"><span style="font-size:.65rem;opacity:.7;display:block;">라</span>4학년</button>
+          <button class="cls-btn gesture-btn" onclick="selectGrade(5)" style="line-height:1.4;padding:6px 10px;"><span style="font-size:.65rem;opacity:.7;display:block;">마</span>5학년</button>
+          <button class="cls-btn gesture-btn" onclick="selectGrade(6)" style="line-height:1.4;padding:6px 10px;"><span style="font-size:.65rem;opacity:.7;display:block;">바</span>6학년</button>
+        </div>
+        <div class="gmb-actions">
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="openGradeAnalysis()">📊 결과분석</button>
+          <button class="btn btn-sm btn-primary gesture-btn" onclick="generateGradeCode()">🔗 참여코드 생성</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetGradeData()" style="border-color:rgba(255,100,100,.5);color:#ff9999;">🗑 학년별 데이터 초기화</button>
+        </div>
+        <div id="grd-code-area" style="display:none;margin-top:8px;">
+          <div class="cls-code-lbl" id="grd-code-lbl"></div>
+          <div class="set-row">
+            <input id="grd-code-disp" type="text" readonly class="set-inp" style="flex:1;font-family:monospace;font-size:.8rem;">
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="copyGradeCode()">복사</button>
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="showGradeQR()">QR</button>
+          </div>
+        </div>
+        <div class="status-line" id="grd-status"></div>
+      </div>
+
+      <!-- 학년반별 관리 -->
+      <div class="gmb-group">학년반별 관리</div>
+
+      <div class="gmb">
+        <div class="gmb-title">라. 1학년 — 반 선택 후 코드 생성</div>
+        <div class="cls-grid" id="cls1-grid">
+          <button class="cls-btn sel gesture-btn" onclick="selectCls(1,1)">1반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(1,2)">2반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(1,3)">3반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(1,4)">4반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(1,5)">5반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(1,6)">6반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(1,7)">7반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(1,8)">8반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(1,9)">9반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(1,10)">10반</button>
+        </div>
+        <div class="gmb-actions">
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="openClsAnalysis(1)">📊 결과분석</button>
+          <button class="btn btn-sm btn-primary gesture-btn" onclick="generateClsCode(1)">🔗 참여코드 생성</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetClsData(1)" style="border-color:rgba(255,100,100,.5);color:#ff9999;">🗑 반별데이터초기화</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetScopeData('학년',1,0,'cls1-status')" style="border-color:rgba(255,60,60,.7);color:#ff6666;">🗑 1학년전체 데이터 초기화</button>
+        </div>
+        <div id="cls1-code-area" style="display:none;margin-top:8px;">
+          <div class="cls-code-lbl" id="cls1-code-lbl"></div>
+          <div class="set-row">
+            <input id="cls1-code-disp" type="text" readonly class="set-inp" style="flex:1;font-family:monospace;font-size:.8rem;">
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="copyClsCode(1)">복사</button>
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="showClsQR(1)">QR</button>
+          </div>
+        </div>
+        <div class="status-line" id="cls1-status"></div>
+      </div>
+
+      <div class="gmb">
+        <div class="gmb-title">마. 2학년 — 반 선택 후 코드 생성</div>
+        <div class="cls-grid" id="cls2-grid">
+          <button class="cls-btn sel gesture-btn" onclick="selectCls(2,1)">1반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(2,2)">2반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(2,3)">3반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(2,4)">4반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(2,5)">5반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(2,6)">6반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(2,7)">7반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(2,8)">8반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(2,9)">9반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(2,10)">10반</button>
+        </div>
+        <div class="gmb-actions">
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="openClsAnalysis(2)">📊 결과분석</button>
+          <button class="btn btn-sm btn-primary gesture-btn" onclick="generateClsCode(2)">🔗 참여코드 생성</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetClsData(2)" style="border-color:rgba(255,100,100,.5);color:#ff9999;">🗑 반별데이터초기화</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetScopeData('학년',2,0,'cls2-status')" style="border-color:rgba(255,60,60,.7);color:#ff6666;">🗑 2학년전체 데이터 초기화</button>
+        </div>
+        <div id="cls2-code-area" style="display:none;margin-top:8px;">
+          <div class="cls-code-lbl" id="cls2-code-lbl"></div>
+          <div class="set-row">
+            <input id="cls2-code-disp" type="text" readonly class="set-inp" style="flex:1;font-family:monospace;font-size:.8rem;">
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="copyClsCode(2)">복사</button>
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="showClsQR(2)">QR</button>
+          </div>
+        </div>
+        <div class="status-line" id="cls2-status"></div>
+      </div>
+
+      <div class="gmb">
+        <div class="gmb-title">바. 3학년 — 반 선택 후 코드 생성</div>
+        <div class="cls-grid" id="cls3-grid">
+          <button class="cls-btn sel gesture-btn" onclick="selectCls(3,1)">1반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(3,2)">2반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(3,3)">3반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(3,4)">4반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(3,5)">5반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(3,6)">6반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(3,7)">7반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(3,8)">8반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(3,9)">9반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(3,10)">10반</button>
+        </div>
+        <div class="gmb-actions">
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="openClsAnalysis(3)">📊 결과분석</button>
+          <button class="btn btn-sm btn-primary gesture-btn" onclick="generateClsCode(3)">🔗 참여코드 생성</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetClsData(3)" style="border-color:rgba(255,100,100,.5);color:#ff9999;">🗑 반별데이터초기화</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetScopeData('학년',3,0,'cls3-status')" style="border-color:rgba(255,60,60,.7);color:#ff6666;">🗑 3학년전체 데이터 초기화</button>
+        </div>
+        <div id="cls3-code-area" style="display:none;margin-top:8px;">
+          <div class="cls-code-lbl" id="cls3-code-lbl"></div>
+          <div class="set-row">
+            <input id="cls3-code-disp" type="text" readonly class="set-inp" style="flex:1;font-family:monospace;font-size:.8rem;">
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="copyClsCode(3)">복사</button>
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="showClsQR(3)">QR</button>
+          </div>
+        </div>
+        <div class="status-line" id="cls3-status"></div>
+      </div>
+
+      <div class="gmb">
+        <div class="gmb-title">사. 4학년 — 반 선택 후 코드 생성</div>
+        <div class="cls-grid" id="cls4-grid">
+          <button class="cls-btn sel gesture-btn" onclick="selectCls(4,1)">1반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(4,2)">2반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(4,3)">3반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(4,4)">4반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(4,5)">5반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(4,6)">6반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(4,7)">7반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(4,8)">8반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(4,9)">9반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(4,10)">10반</button>
+        </div>
+        <div class="gmb-actions">
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="openClsAnalysis(4)">📊 결과분석</button>
+          <button class="btn btn-sm btn-primary gesture-btn" onclick="generateClsCode(4)">🔗 참여코드 생성</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetClsData(4)" style="border-color:rgba(255,100,100,.5);color:#ff9999;">🗑 반별데이터초기화</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetScopeData('학년',4,0,'cls4-status')" style="border-color:rgba(255,60,60,.7);color:#ff6666;">🗑 4학년전체 데이터 초기화</button>
+        </div>
+        <div id="cls4-code-area" style="display:none;margin-top:8px;">
+          <div class="cls-code-lbl" id="cls4-code-lbl"></div>
+          <div class="set-row">
+            <input id="cls4-code-disp" type="text" readonly class="set-inp" style="flex:1;font-family:monospace;font-size:.8rem;">
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="copyClsCode(4)">복사</button>
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="showClsQR(4)">QR</button>
+          </div>
+        </div>
+        <div class="status-line" id="cls4-status"></div>
+      </div>
+
+      <div class="gmb">
+        <div class="gmb-title">아. 5학년 — 반 선택 후 코드 생성</div>
+        <div class="cls-grid" id="cls5-grid">
+          <button class="cls-btn sel gesture-btn" onclick="selectCls(5,1)">1반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(5,2)">2반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(5,3)">3반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(5,4)">4반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(5,5)">5반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(5,6)">6반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(5,7)">7반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(5,8)">8반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(5,9)">9반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(5,10)">10반</button>
+        </div>
+        <div class="gmb-actions">
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="openClsAnalysis(5)">📊 결과분석</button>
+          <button class="btn btn-sm btn-primary gesture-btn" onclick="generateClsCode(5)">🔗 참여코드 생성</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetClsData(5)" style="border-color:rgba(255,100,100,.5);color:#ff9999;">🗑 반별데이터초기화</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetScopeData('학년',5,0,'cls5-status')" style="border-color:rgba(255,60,60,.7);color:#ff6666;">🗑 5학년전체 데이터 초기화</button>
+        </div>
+        <div id="cls5-code-area" style="display:none;margin-top:8px;">
+          <div class="cls-code-lbl" id="cls5-code-lbl"></div>
+          <div class="set-row">
+            <input id="cls5-code-disp" type="text" readonly class="set-inp" style="flex:1;font-family:monospace;font-size:.8rem;">
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="copyClsCode(5)">복사</button>
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="showClsQR(5)">QR</button>
+          </div>
+        </div>
+        <div class="status-line" id="cls5-status"></div>
+      </div>
+
+      <div class="gmb">
+        <div class="gmb-title">자. 6학년 — 반 선택 후 코드 생성</div>
+        <div class="cls-grid" id="cls6-grid">
+          <button class="cls-btn sel gesture-btn" onclick="selectCls(6,1)">1반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(6,2)">2반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(6,3)">3반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(6,4)">4반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(6,5)">5반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(6,6)">6반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(6,7)">7반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(6,8)">8반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(6,9)">9반</button>
+          <button class="cls-btn gesture-btn" onclick="selectCls(6,10)">10반</button>
+        </div>
+        <div class="gmb-actions">
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="openClsAnalysis(6)">📊 결과분석</button>
+          <button class="btn btn-sm btn-primary gesture-btn" onclick="generateClsCode(6)">🔗 참여코드 생성</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetClsData(6)" style="border-color:rgba(255,100,100,.5);color:#ff9999;">🗑 반별데이터초기화</button>
+          <button class="btn btn-sm btn-ghost gesture-btn" onclick="resetScopeData('학년',6,0,'cls6-status')" style="border-color:rgba(255,60,60,.7);color:#ff6666;">🗑 6학년전체 데이터 초기화</button>
+        </div>
+        <div id="cls6-code-area" style="display:none;margin-top:8px;">
+          <div class="cls-code-lbl" id="cls6-code-lbl"></div>
+          <div class="set-row">
+            <input id="cls6-code-disp" type="text" readonly class="set-inp" style="flex:1;font-family:monospace;font-size:.8rem;">
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="copyClsCode(6)">복사</button>
+            <button class="btn btn-sm btn-ghost gesture-btn" onclick="showClsQR(6)">QR</button>
+          </div>
+        </div>
+        <div class="status-line" id="cls6-status"></div>
+      </div>
+    </div>
+
+    <!-- BGM -->
+    <div class="set-sec">
+      <h4>🎵 배경음악 (BGM)</h4>
+      <p>게임 중 경쾌한 배경음악을 재생합니다. 카운트다운부터 자동 재생됩니다.</p>
+      <div class="toggle-wrap">
+        <input type="checkbox" id="bgm-enabled" onchange="toggleBGM(this)">
+        <label for="bgm-enabled">배경음악 사용하기</label>
+      </div>
+      <div class="status-line" id="bgm-status"></div>
+    </div>
+
+    <!-- 손동작 인식 -->
+    <div class="set-sec">
+      <h4>✋ 손동작 인식 (카메라)</h4>
+      <p>카메라로 손 위치를 추적해, 공중에서 손을 움직여 떨어지는 글자를 만지면 터집니다. 끄면 화면 터치(탭)로만 진행합니다. 손 인식이 안 되는 환경에서는 자동으로 화면 터치로 전환됩니다.</p>
+      <div class="toggle-wrap">
+        <input type="checkbox" id="hand-enabled" onchange="toggleHand(this)">
+        <label for="hand-enabled">손동작 인식 사용하기 (권장)</label>
+      </div>
+      <div class="status-line" id="hand-status"></div>
+    </div>
+
+    <!-- 엑셀 단어 등록 -->
+    <div class="set-sec">
+      <h4>📂 엑셀 파일로 단어 등록</h4>
+      <p>엑셀 첫 행 머리글을 <b style="color:#ffd93d;">저학년 / 중학년 / 고학년</b>으로 작성하고, 각 칸에 <b style="color:#ffd93d;">속담|뜻 형식으로 입력하세요. (예: <code>가는 말이 고와야 오는 말이 곱다|내가 남에게 잘 해야 남도 나에게 잘 한다</code>) 구분자는 <b>|</b> <b>/</b> <b>,</b> 모두 가능합니다. 등록하지 않으면 기본 속담이 사용됩니다.</p>
+      <div class="upload-zone" onclick="document.getElementById('excel-inp').click()">
+        <div style="font-size:2.5rem;">📊</div>
+        <div style="margin-top:8px;">클릭하여 엑셀 파일 업로드<br><small>(.xlsx, .xls)</small></div>
+      </div>
+      <input type="file" id="excel-inp" accept=".xlsx,.xls" style="display:none;" onchange="loadExcel(this)">
+      <div id="excel-status"></div>
+      <div id="word-previews" style="margin-top:14px;"></div>
+    </div>
+
+    <!-- 데이터 관리 -->
+    <div class="set-sec">
+      <h4>🗑️ 데이터 관리</h4>
+      <div class="set-row">
+        <button class="btn btn-ghost btn-sm gesture-btn" onclick="resetWords()">단어 초기화 (기본값)</button>
+        <button class="btn btn-ghost btn-sm gesture-btn" onclick="clearLB()" style="border-color:rgba(255,100,100,.5);color:#ff6b6b;">현재 랭킹 초기화</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═════════════════════════════════════════════
+// WORD DATA
+// ═════════════════════════════════════════════
+// 속담 데이터 — {i:속담, m:뜻}
+// 1=저학년(초1~2) · 2=중학년(초3~4) · 3=고학년(초5↑)
+const DEF = {
+  1:[
+    {i:'가는 말이 고와야 오는 말이 곱다',m:'내가 남에게 잘 해야 남도 나에게 잘 한다'},
+    {i:'세 살 버릇 여든까지 간다',m:'어릴 때 습관은 평생 간다'},
+    {i:'시작이 반이다',m:'일을 시작하는 것이 가장 중요하다'},
+    {i:'고생 끝에 낙이 온다',m:'힘든 일 뒤에는 좋은 일이 온다'},
+    {i:'천 리 길도 한 걸음부터',m:'큰일도 작은 것부터 시작된다'},
+    {i:'티끌 모아 태산',m:'작은 것도 모이면 큰 것이 된다'},
+    {i:'백지장도 맞들면 낫다',m:'쉬운 일도 함께 하면 더 좋다'},
+    {i:'원숭이도 나무에서 떨어진다',m:'아무리 잘 하는 사람도 실수할 때가 있다'},
+    {i:'그림의 떡',m:'보기는 좋지만 가질 수 없는 것'},
+    {i:'낮말은 새가 듣고 밤말은 쥐가 듣는다',m:'말을 항상 조심해야 한다'},
+    {i:'뛰는 놈 위에 나는 놈 있다',m:'잘난 사람 위에 더 잘난 사람이 있다'},
+    {i:'콩 심은 데 콩 나고 팥 심은 데 팥 난다',m:'원인에 따라 결과가 달라진다'},
+    {i:'소 잃고 외양간 고친다',m:'일이 이미 잘못된 후에야 조치를 취한다'},
+    {i:'말 한마디에 천 냥 빚도 갚는다',m:'말을 잘 하면 어려운 일도 해결된다'},
+    {i:'우물 안 개구리',m:'세상 물정을 모르는 사람'},
+    {i:'아니 땐 굴뚝에 연기 나랴',m:'원인 없이 결과가 생기지 않는다'},
+    {i:'작은 고추가 더 맵다',m:'작아 보여도 실력이 뛰어난 사람이 있다'},
+    {i:'빈 수레가 요란하다',m:'실속 없는 사람이 더 떠들어 댄다'},
+    {i:'바늘 도둑이 소도둑 된다',m:'작은 나쁜 버릇이 나중에 크게 된다'},
+    {i:'금강산도 식후경',m:'아무리 좋은 것도 배부른 다음에야 즐길 수 있다'},
+    {i:'도토리 키 재기',m:'비슷비슷한 것끼리 서로 잘났다고 다툰다'},
+    {i:'서당 개 삼 년이면 풍월을 읊는다',m:'자꾸 보고 들으면 자연히 알게 된다'},
+    {i:'식은 죽 먹기',m:'매우 쉬운 일'},
+    {i:'호랑이도 제 말 하면 온다',m:'누군가 이야기할 때 그 사람이 나타난다'},
+    {i:'돌다리도 두드려 보고 건너라',m:'확실한 것도 다시 한번 확인해야 한다'},
+    {i:'가랑비에 옷 젖는 줄 모른다',m:'작은 것도 쌓이면 크게 된다'},
+    {i:'오르지 못할 나무는 쳐다보지도 마라',m:'불가능한 일에 욕심을 내지 마라'},
+    {i:'등잔 밑이 어둡다',m:'가까이 있는 것을 오히려 잘 모른다'},
+    {i:'세월이 약이다',m:'시간이 지나면 슬픔도 사라진다'},
+    {i:'쥐구멍에도 볕 들 날이 있다',m:'힘든 사람에게도 좋은 날이 온다'},
+    {i:'남의 떡이 커 보인다',m:'남의 것이 항상 좋아 보인다'},
+    {i:'구슬이 서 말이라도 꿰어야 보배',m:'아무리 좋은 것도 제대로 써야 가치가 있다'},
+    {i:'개구리 올챙이 적 생각 못 한다',m:'자기가 힘들 때를 잊고 잘난 척한다'},
+    {i:'가재는 게 편이다',m:'비슷한 것끼리 서로 편이 된다'},
+    {i:'병 주고 약 준다',m:'해를 끼치고 나서 해결하는 척한다'},
+    {i:'손뼉도 마주쳐야 소리가 난다',m:'혼자서는 일을 이루기 어렵다'},
+    {i:'웃는 낯에 침 뱉으랴',m:'친절하게 대하는 사람에게는 무례하게 굴기 어렵다'},
+    {i:'친구 따라 강남 간다',m:'자기 의지 없이 남을 따라 한다'},
+    {i:'배보다 배꼽이 더 크다',m:'부수적인 것이 오히려 더 커진 상황'},
+    {i:'하늘이 무너져도 솟아날 구멍이 있다',m:'아무리 어려운 상황에도 해결책이 있다'},
+    {i:'눈 가리고 아웅 한다',m:'얕은 꾀로 남을 속이려 한다'},
+    {i:'방귀 뀐 놈이 성낸다',m:'잘못한 사람이 오히려 화를 낸다'},
+    {i:'하늘은 스스로 돕는 자를 돕는다',m:'스스로 노력하는 사람에게 행운이 온다'},
+    {i:'다 된 죽에 코 빠뜨린다',m:'거의 다 된 일을 망쳐 버린다'},
+    {i:'모로 가도 서울만 가면 된다',m:'방법이 어떻든 목적을 이루면 된다'},
+    {i:'누울 자리 봐 가며 발 뻗어라',m:'상황을 미리 살피고 행동해야 한다'},
+    {i:'공든 탑이 무너지랴',m:'노력해서 한 일은 쉽게 무너지지 않는다'},
+    {i:'까마귀 날자 배 떨어진다',m:'우연히 한 일이 다른 일과 관계있는 것처럼 보인다'},
+    {i:'아는 것이 힘이다',m:'지식을 가지는 것이 중요하다'},
+    {i:'하루 강아지 범 무서운 줄 모른다',m:'경험이 없는 사람은 위험을 모른다'},
+    {i:'급하면 바늘허리에 실 매어 쓸까',m:'무슨 일이든 순서와 절차가 있다'},
+    {i:'언 발에 오줌 누기',m:'임시방편이라 오래 효과가 없다'},
+    {i:'호미로 막을 것을 가래로 막는다',m:'미리 조치하지 않아 더 큰 힘이 들게 된다'},
+    {i:'되로 주고 말로 받는다',m:'조금 주고 훨씬 많이 되돌려 받는다'},
+    {i:'고양이 쥐 생각한다',m:'겉으로는 걱정하는 척하지만 속으로는 딴마음이다'},
+    {i:'떡 줄 사람은 꿈도 안 꾸는데',m:'해줄 의사도 없는 사람에게 미리 기대한다'},
+    {i:'장님 코끼리 만지기',m:'전체를 보지 못하고 일부만 보고 판단한다'},
+    {i:'반갑다고 뺨 치기',m:'반가움을 지나쳐 예의에 어긋난 행동을 한다'},
+    {i:'물이 새면 배가 가랴',m:'기본이 안 되면 일을 이룰 수 없다'},
+    {i:'닭 잡아먹고 오리발 내놓기',m:'나쁜 일을 해놓고 딴청을 부린다'},
+    {i:'자라 보고 놀란 가슴 솥뚜껑 보고 놀란다',m:'한번 크게 놀란 후에는 비슷한 것에도 놀란다'}
+  ],
+  2:[
+    {i:'가는 날이 장날이다',m:'뜻하지 않게 공교롭게 좋지 않은 일이 맞아떨어진다'},
+    {i:'고래 싸움에 새우 등 터진다',m:'강자들이 다투는 사이에 약한 자가 피해를 입는다'},
+    {i:'될성부른 나무는 떡잎부터 알아본다',m:'큰 인물은 어릴 때부터 남다른 면이 있다'},
+    {i:'마른 하늘에 날벼락',m:'예상치 못한 큰 재앙이 갑자기 닥친다'},
+    {i:'모난 돌이 정 맞는다',m:'유독 튀어나온 사람이 남의 공격을 받는다'},
+    {i:'밑 빠진 독에 물 붓기',m:'아무리 해도 보람이 없는 일'},
+    {i:'사공이 많으면 배가 산으로 간다',m:'참견하는 사람이 많으면 일이 잘못된다'},
+    {i:'쇠뿔도 단김에 빼라',m:'일이 가능할 때 곧바로 행동해야 한다'},
+    {i:'열 길 물속은 알아도 한 길 사람 속은 모른다',m:'사람의 속마음은 알기 매우 어렵다'},
+    {i:'우물을 파도 한 우물을 파라',m:'한 가지 일에 전념해야 성공한다'},
+    {i:'윗물이 맑아야 아랫물이 맑다',m:'윗사람이 바르게 행동해야 아랫사람도 바르다'},
+    {i:'이 없으면 잇몸으로 산다',m:'없으면 없는 대로 살아간다'},
+    {i:'재주는 곰이 부리고 돈은 왕서방이 번다',m:'수고는 자기가 하고 이익은 다른 사람이 챙긴다'},
+    {i:'젊어 고생은 사서도 한다',m:'젊었을 때의 고생은 나중에 큰 도움이 된다'},
+    {i:'죽 쒀서 개 준다',m:'힘들게 한 일을 엉뚱한 사람이 가로챈다'},
+    {i:'지렁이도 밟으면 꿈틀한다',m:'아무리 약한 사람도 가만히 당하지만은 않는다'},
+    {i:'첫술에 배부르랴',m:'처음부터 잘 할 수는 없다'},
+    {i:'털어서 먼지 안 나는 사람 없다',m:'누구나 크고 작은 허물이 있다'},
+    {i:'핑계 없는 무덤 없다',m:'잘못에 대한 변명 없는 사람은 없다'},
+    {i:'호랑이 굴에 들어가야 호랑이를 잡는다',m:'위험을 무릅쓰지 않으면 큰일을 이룰 수 없다'},
+    {i:'혹 떼러 갔다가 혹 붙여 온다',m:'해결하러 갔다가 오히려 더 나빠진다'},
+    {i:'백 번 듣는 것이 한 번 보는 것만 못하다',m:'직접 경험하는 것이 가장 중요하다'},
+    {i:'발 없는 말이 천 리 간다',m:'말은 빠르게 퍼지니 말을 조심해야 한다'},
+    {i:'가지 많은 나무에 바람 잘 날 없다',m:'자식 많은 부모는 걱정이 끊이지 않는다'},
+    {i:'개천에서 용 난다',m:'변변치 않은 환경에서 훌륭한 인물이 나온다'},
+    {i:'내 코가 석 자',m:'자기도 어려운 처지라 남을 도울 여유가 없다'},
+    {i:'닭 쫓던 개 지붕 쳐다본다',m:'애써 한 일이 헛되게 된 처지'},
+    {i:'도둑이 제 발 저리다',m:'잘못을 저지른 사람이 두려움에 먼저 반응한다'},
+    {i:'미꾸라지 한 마리가 온 웅덩이를 흐려 놓는다',m:'한 사람의 잘못이 여러 사람에게 피해를 준다'},
+    {i:'배고픈 것은 참아도 배 아픈 것은 못 참는다',m:'자기가 굶는 것보다 남이 잘 되는 것을 더 못 참는다'},
+    {i:'뱁새가 황새 걸음을 걸으려 한다',m:'능력 밖의 일을 흉내 내려 한다'},
+    {i:'부뚜막의 소금도 집어넣어야 짜다',m:'아무리 좋은 것도 실제로 써야 쓸모가 있다'},
+    {i:'불난 집에 부채질한다',m:'어려운 상황을 더 나쁘게 만든다'},
+    {i:'제 논에 물 대기',m:'자기에게 이롭게만 생각하거나 행동한다'},
+    {i:'찬물도 위아래가 있다',m:'무슨 일에나 순서와 차례가 있다'},
+    {i:'차면 넘친다',m:'지나치면 좋지 않다'},
+    {i:'입술이 없으면 이가 시리다',m:'가까운 사람이 어려우면 나도 어렵다'},
+    {i:'바늘 가는 데 실 간다',m:'항상 붙어다니는 사이'},
+    {i:'갈수록 태산',m:'어렵고 힘든 일이 갈수록 더해 간다'},
+    {i:'구르는 돌에는 이끼가 안 낀다',m:'부지런히 움직이는 사람에게는 나태함이 없다'},
+    {i:'굿이나 보고 떡이나 먹어라',m:'자기와 상관없는 일에 쓸데없이 끼어들지 마라'},
+    {i:'돌아가는 것이 지름길',m:'바르게 하는 것이 결국 빠른 길이다'},
+    {i:'물에 빠진 사람 지푸라기라도 잡는다',m:'위급할 때는 아무것에나 의지한다'},
+    {i:'가랑잎이 솔잎더러 바스락거린다고 한다',m:'자기 흠은 모르고 남의 흠만 나무란다'},
+    {i:'남의 눈의 티는 보여도 자기 눈의 들보는 안 보인다',m:'자기 허물은 못 보고 남의 허물만 본다'},
+    {i:'아이 보는 데 찬물도 못 마신다',m:'아이들 교육을 위해 어른은 항상 행동을 조심해야 한다'},
+    {i:'짚신도 짝이 있다',m:'아무리 변변치 않은 사람도 자기에게 맞는 상대가 있다'},
+    {i:'엎드려 절받기',m:'마지못해 하는 형식적인 일'},
+    {i:'오뉴월 감기는 개도 안 걸린다',m:'여름 감기를 우습게 여기지 말라'},
+    {i:'시간은 금이다',m:'시간은 매우 소중하다'},
+    {i:'값싼 것이 비지떡',m:'품질이 나쁜 것은 값도 싸다'},
+    {i:'산이 높아야 골도 깊다',m:'훌륭할수록 어려운 점도 많다'},
+    {i:'들어가는 정이 나오는 정',m:'잘 대해 주면 상대도 잘 대해 준다'},
+    {i:'대추나무에 연 걸리듯',m:'생각지 않던 일이 잘 걸려들게 됨'},
+    {i:'죽 먹은 눈이 시원하랴',m:'어떤 일이 충분하지 않아 만족스럽지 않다'},
+    {i:'호박이 넝쿨째 굴러 들어온다',m:'기대하지 않던 좋은 일이 한꺼번에 생긴다'},
+    {i:'엎질러진 물',m:'이미 저질러진 일은 되돌이킬 수 없다'},
+    {i:'꿩 먹고 알 먹기',m:'한 가지 일로 두 가지 이익을 얻는다'},
+    {i:'소귀에 경 읽기',m:'아무리 타일러도 알아듣지 못한다'},
+    {i:'자고 일어나면 하루가 늘어간다',m:'세월은 계속 흘러간다'}
+  ],
+  3:[
+    {i:'벼는 익을수록 고개를 숙인다',m:'훌륭한 사람일수록 겸손하다'},
+    {i:'목마른 사람이 우물 판다',m:'필요한 사람이 직접 나서서 해결한다'},
+    {i:'달면 삼키고 쓰면 뱉는다',m:'자기에게 유리하면 취하고 불리하면 버린다'},
+    {i:'누워서 침 뱉기',m:'남을 해치려다 자기가 피해를 입는다'},
+    {i:'낙숫물이 댓돌을 뚫는다',m:'작은 노력도 꾸준히 하면 큰 결과를 낸다'},
+    {i:'남의 잔치에 감 놔라 배 놔라 한다',m:'남의 일에 쓸데없이 참견한다'},
+    {i:'냉수 먹고 이 쑤신다',m:'형편없으면서 잘난 척한다'},
+    {i:'독 안에 든 쥐',m:'빠져나갈 수 없는 처지에 놓인 것'},
+    {i:'두 마리 토끼를 잡으려다 두 마리 다 놓친다',m:'욕심을 부리다가 모두 잃는다'},
+    {i:'마파람에 게 눈 감추듯',m:'음식을 매우 빨리 먹어치운다'},
+    {i:'무소식이 희소식',m:'소식이 없는 것이 좋은 소식이다'},
+    {i:'숯이 검정 나무란다',m:'자기 결함은 모르고 남을 나무란다'},
+    {i:'싸움은 말리고 흥정은 붙여라',m:'나쁜 일은 막고 좋은 일은 이어 주어야 한다'},
+    {i:'안되면 조상 탓',m:'일이 안 되면 엉뚱한 것에 핑계를 댄다'},
+    {i:'약방에 감초',m:'어디서나 빠지지 않는 사람이나 물건'},
+    {i:'어물전 망신은 꼴뚜기가 시킨다',m:'한 사람의 잘못이 집단 전체에 피해를 준다'},
+    {i:'염불에는 맘이 없고 잿밥에만 맘이 있다',m:'본래 해야 할 일보다 이익에만 관심이 있다'},
+    {i:'울며 겨자 먹기',m:'싫어도 어쩔 수 없이 억지로 해야 한다'},
+    {i:'참을 인이 셋이면 살인도 면한다',m:'참을성이 있으면 큰 화를 피할 수 있다'},
+    {i:'콩으로 메주를 쑨다 해도 안 믿는다',m:'신뢰를 잃은 사람은 사실도 믿어주지 않는다'},
+    {i:'팔은 안으로 굽는다',m:'자기와 가까운 편을 들게 된다'},
+    {i:'황금 보기를 돌같이 하라',m:'재물에 탐내지 말고 의리와 도덕을 지켜라'},
+    {i:'사람은 죽어서 이름을 남기고 호랑이는 죽어서 가죽을 남긴다',m:'사람은 살아서 좋은 이름을 남겨야 한다'},
+    {i:'바위에 계란 치기',m:'강한 것에 약한 것으로 맞서는 것은 무모하다'},
+    {i:'보기 좋은 떡이 먹기도 좋다',m:'겉모습이 좋은 것은 내용도 좋다'},
+    {i:'손 안 대고 코 풀기',m:'힘들이지 않고 이익을 얻으려 한다'},
+    {i:'귀에 걸면 귀걸이 코에 걸면 코걸이',m:'이렇게도 저렇게도 해석할 수 있다'},
+    {i:'굼뱅이도 구르는 재주가 있다',m:'누구에게나 한 가지 재주는 있다'},
+    {i:'구관이 명관이다',m:'새것보다 익숙한 것이 더 낫다'},
+    {i:'소도 비빌 언덕이 있어야 한다',m:'어떤 존재도 의지할 곳이 필요하다'},
+    {i:'서울 가서 눈 팔기',m:'자신 없는 곳에서 잘난 척한다'},
+    {i:'삼 년 가뭄에도 씨 떨어질 날 없다',m:'아무리 힘들어도 최소한의 것은 남겨야 한다'},
+    {i:'백 번 꺾여도 굽히지 않는다',m:'어떤 어려움에도 굴하지 않는다'},
+    {i:'기는 놈 위에 나는 놈 있다',m:'아무리 뛰어나도 더 뛰어난 사람이 있다'},
+    {i:'꿈보다 해몽이 좋다',m:'결과보다 해석을 좋게 하면 기분이 좋아진다'},
+    {i:'거미도 줄을 쳐야 벌레를 잡는다',m:'준비를 갖추어야 성과를 거둘 수 있다'},
+    {i:'밥 먹을 때는 개도 안 건드린다',m:'밥 먹는 사람의 방해는 하지 않는다'},
+    {i:'돼지에 진주 목걸이',m:'가치를 모르는 사람에게 귀한 것을 주어도 소용없다'},
+    {i:'함흥차사',m:'심부름 간 사람이 아무 소식도 없이 돌아오지 않는다'},
+    {i:'가는 말에 채찍질',m:'이미 잘 하고 있는 일에 더욱 박차를 가한다'},
+    {i:'열 사람이 한 도둑을 못 막는다',m:'나쁜 의도를 가진 사람을 막기는 쉽지 않다'},
+    {i:'오뉴월 더위는 먹어도 삼사월 추위는 못 먹는다',m:'봄 추위가 여름 더위보다 견디기 더 힘들다'},
+    {i:'하룻강아지 범 무서운 줄 모른다',m:'경험이 없는 사람은 위험한 줄 모른다'},
+    {i:'허리가 부러져도 할 말은 한다',m:'아무리 어려워도 자기 의사를 표현한다'},
+    {i:'딸꾹질도 때가 있다',m:'모든 일에는 적절한 때가 있다'},
+    {i:'물도 아랫물이 먼저 흐른다',m:'아래 것이 먼저 가야 위의 것도 간다'},
+    {i:'무위도식',m:'하는 일 없이 놀고먹기만 한다'},
+    {i:'입에 쓴 약이 병에는 좋다',m:'듣기 싫은 충고가 자신에게는 도움이 된다'},
+    {i:'자기 얼굴에 침 뱉기',m:'자기가 한 행동이 자기 체면을 손상시킨다'},
+    {i:'도둑을 맞으려면 개도 안 짖는다',m:'재수가 나쁘면 모든 일이 잘못된다'},
+    {i:'뜻이 있는 곳에 길이 있다',m:'강한 의지가 있으면 방법을 찾아낼 수 있다'},
+    {i:'먼 데 사촌보다 가까운 이웃이 낫다',m:'멀리 있는 친척보다 가까이 있는 이웃이 더 도움이 된다'},
+    {i:'부지런한 사람이 복을 받는다',m:'열심히 일하는 사람이 보람을 얻는다'},
+    {i:'가는 정이 있어야 오는 정이 있다',m:'내가 먼저 잘 대해야 상대도 잘 대해 준다'},
+    {i:'밑져야 본전이다',m:'해봐도 손해는 없으니 시도해 볼 만하다'},
+    {i:'세 치 혀가 사람을 죽인다',m:'말 한마디가 사람에게 크나큰 상처를 줄 수 있다'},
+    {i:'열 번 찍어 안 넘어가는 나무 없다',m:'꾸준히 노력하면 어떤 일도 이룰 수 있다'},
+    {i:'좋은 약은 입에 쓰다',m:'바른 말과 충고는 귀에 거슬리지만 도움이 된다'},
+    {i:'피는 물보다 진하다',m:'혈육의 정은 다른 어떤 것보다 깊다'},
+    {i:'하늘을 보아야 별을 따지',m:'무엇이든 목표를 향해 노력해야 이룰 수 있다'},
+    {i:'공자 앞에서 문자 쓴다',m:'잘 아는 전문가 앞에서 잘 아는 척한다'}
+  ]
+};
+// 속담 보기 풀: 단계별 객체 배열 {i,m} 반환
+function getPool(stage){
+  const c=getCustom();
+  return (c&&c[stage]&&c[stage].length)?c[stage]:DEF[stage];
+}
+
+// ═════════════════════════════════════════════
+// APP MODE / STORAGE LAYER
+// ═════════════════════════════════════════════
+let appMode = localStorage.getItem('spq_mode') || null;   // 'offline' | 'online'
+let _rememberSchool = localStorage.getItem('spq_remember_school') !== '0'; // 기본 true
+let school  = _rememberSchool ? (localStorage.getItem('spq_school') || '') : '';
+let scope   = localStorage.getItem('spq_scope')  || '전체'; // '전체'|'학년'|'반'
+let scopeGrade = parseInt(localStorage.getItem('spq_scope_grade')||'0')||0;
+let scopeClass = parseInt(localStorage.getItem('spq_scope_class')||'0')||0;
+let settingsUnlocked = false;
+let isParticipant = localStorage.getItem('spq_participant')==='1'; // 참여코드로 입장한 기기 → 환경설정 숨김
+let beforeSettings = 'intro';
+// pending scope selection
+let _psc='', _psg=0, _pscl=0;
+
+function getAdminPW(){
+  return localStorage.getItem('spq_pw_admin_'+(school||'def'))
+      || localStorage.getItem('spq_adminpw') || '0000';
+}
+function setAdminPW(v){
+  localStorage.setItem('spq_pw_admin_'+(school||'def'),v);
+  localStorage.setItem('spq_adminpw',v);
+  // 해시도 함께 갱신 (참여코드에 실어 다른 기기로 전파)
+  setAdminHash(hashPW(v));
+}
+
+function driveCfg(){
+  return {
+    url: localStorage.getItem('spq_drive_url') || '',
+    secret: localStorage.getItem('spq_drive_secret') || '0000',
+    enabled: localStorage.getItem('spq_drive_enabled') === '1'
+  };
+}
+function driveActive(){ const d=driveCfg(); return appMode==='online' && !!d.url; }
+
+function lbKey(){
+  if(appMode!=='online') return 'spq_lb_offline';
+  const b='spq_lb_online_'+(school||'default');
+  if(scope==='학년') return b+'_학년_'+scopeGrade;
+  if(scope==='반')   return b+'_반_'+scopeGrade+'_'+scopeClass;
+  return b+'_전체';
+}
+
+// ── State ──
+let playerName='', playerScore=0;
+let stage=0;
+let gameActive=false, timeLeft=60;
+let timerInt=null, spawnInt=null;
+let wordQueue=[], wordsDone=0, currentTarget=null, currentOptions=[], gameLocked=false;
+let comboCount=0;
+let recognition=null, audioCtx=null;
+const _spawnReg=new WeakMap(); // 버블 X위치 등록 (겹침 방지 — 동일 프레임 spawn 대응)
+let curScreen='mode';
+let dwellEl=null, dwellTimer=null;
+const DWELL_MS=700;
+let wrongWordsSession=[], wrongClickCount=0, gameStartTime=0;
+
+const PTS={1:4,2:6,3:8};            // 정답 점수 (저/중/고)
+const PEN={1:2,2:3,3:4};            // 오답 감점 (저/중/고)
+const STAGE_NAME={1:'저학년',2:'중학년',3:'고학년'};
+const SCREEN_DISP={mode:'flex',login:'flex',scope:'flex',intro:'flex',name:'flex',stage:'flex',countdown:'flex',game:'block',end:'flex',settings:'flex',analysis:'flex'};
+
+// ═════════════════════════════════════════════
+// SCREEN MANAGEMENT
+// ═════════════════════════════════════════════
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.style.display='none');
+  document.getElementById('screen-'+id).style.display=SCREEN_DISP[id]||'flex';
+  curScreen=id;
+  const HIDE_SETTINGS=new Set(['mode','name','stage','countdown','game','end','settings']);
+  const wrap=document.getElementById('settingsWrap');
+  wrap.style.display=(HIDE_SETTINGS.has(id)||isParticipant)?'none':'flex';
+  // 환경설정 화면에서는 로그아웃 버튼을 항상 보이게 고정
+  const lo=document.getElementById('settingsLogoutBtn');
+  if(lo) lo.style.display=(id==='settings')?'flex':'none';
+  // 결과분석 화면을 벗어나면 실시간 폴링 중단
+  if(id!=='analysis' && typeof stopAnalysisPolling==='function') stopAnalysisPolling();
+  const badge=document.getElementById('modeBadgeSm');
+  if(appMode==='online'){badge.textContent='온';badge.style.color='#4cde80';}
+  else{badge.textContent='오';badge.style.color='#aaa';}
+  if(typeof clearDwell==='function') clearDwell();
+}
+
+// ═════════════════════════════════════════════
+// CAMERA
+// ═════════════════════════════════════════════
+async function initCamera(){
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
+    const v=document.getElementById('video');
+    v.srcObject=s;
+    // autoplay 차단 대비 — 명시적 play() 호출
+    v.play().catch(()=>{
+      // 사용자 첫 터치 시 재시도 (일부 브라우저 autoplay 정책)
+      document.addEventListener('pointerdown',()=>v.play().catch(()=>{}),{once:true});
+    });
+  }catch(e){console.warn('카메라 사용 불가:',e);}
+}
+
+// ── HAND TRACKING (MediaPipe) ──
+let mpHands=null, mpCamera=null, handReady=false, lastHandHit=0;
+let lastHandFrame=0, handWatchdog=null;
+let lastHandVisible=0;   // 손이 마지막으로 화면에 보인 시각 (performance.now)
+let handDwellEl=null, handDwellStart=0, handLastOnBubble=0; // 손 제스처 0.5초 체류 판정용
+const HAND_DWELL_MS=500;  // 같은 버블에 0.5초 이상 머물러야 반응
+const HAND_GRACE_MS=150;  // 짧은 끊김(손 떨림/지터) 허용 시간
+function handTrackingEnabled(){ return localStorage.getItem('spq_hand')!=='0'; } // 기본 ON
+
+async function startCameraAndHands(){
+  if(handWatchdog){clearInterval(handWatchdog);handWatchdog=null;}
+  const video=document.getElementById('video');
+  if(handTrackingEnabled() && typeof Hands!=='undefined' && typeof Camera!=='undefined'){
+    try{
+      // 기존 카메라·핸즈가 있으면 중지 후 재생성
+      if(mpCamera){try{mpCamera.stop();}catch(e){} mpCamera=null;}
+      if(mpHands){try{mpHands.close();}catch(e){} mpHands=null;}
+      mpHands=new Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+      mpHands.setOptions({maxNumHands:2,modelComplexity:0,minDetectionConfidence:.6,minTrackingConfidence:.5});
+      mpHands.onResults(onHandResults);
+      mpCamera=new Camera(video,{onFrame:async()=>{try{await mpHands.send({image:video});}catch(e){}},width:1280,height:720});
+      await mpCamera.start();
+      const v2=document.getElementById('video');
+      v2.play().catch(()=>{document.addEventListener('pointerdown',()=>v2.play().catch(()=>{}),{once:true});});
+      handReady=true;
+      lastHandFrame=Date.now();
+      // watchdog: 3초 이상 onHandResults 콜백이 없으면 자동 재시작
+      handWatchdog=setInterval(()=>{
+        if(!handTrackingEnabled()) return;
+        if(Date.now()-lastHandFrame>3000){
+          console.warn('손 추적 응답 없음 — 자동 재시작');
+          clearInterval(handWatchdog); handWatchdog=null;
+          startCameraAndHands();
+        }
+      },1000);
+      return;
+    }catch(e){console.warn('손 추적 시작 실패 → 화면 터치로 진행:',e);handReady=false;}
+  }
+  initCamera(); // 손 추적 미사용/실패 시 일반 카메라 배경만
+}
+
+// 정규화 좌표(영상 기준) → 화면 픽셀 (object-fit:cover + 좌우반전 보정)
+function videoToScreen(nx,ny){
+  const v=document.getElementById('video');
+  const vw=v.videoWidth||1280, vh=v.videoHeight||720;
+  const sw=window.innerWidth, sh=window.innerHeight;
+  const scale=Math.max(sw/vw, sh/vh);
+  const dw=vw*scale, dh=vh*scale;
+  const offX=(sw-dw)/2, offY=(sh-dh)/2;
+  const x=offX+nx*dw, y=offY+ny*dh;
+  return {x:sw-x, y};   // 거울(좌우 반전)
+}
+function ensureCursorEls(){
+  let c=document.getElementById('hand-cursors');
+  if(!c){c=document.createElement('div');c.id='hand-cursors';document.body.appendChild(c);}
+  return c;
+}
+function updateCursors(tips){
+  const c=ensureCursorEls();
+  while(c.children.length<tips.length){const d=document.createElement('div');d.className='finger-cursor';c.appendChild(d);}
+  for(let i=0;i<c.children.length;i++){
+    const d=c.children[i];
+    if(i<tips.length){d.style.display='block';d.style.left=tips[i].x+'px';d.style.top=tips[i].y+'px';}
+    else d.style.display='none';
+  }
+}
+function hideCursors(){const c=document.getElementById('hand-cursors');if(c)[...c.children].forEach(d=>d.style.display='none');}
+
+const MENU_SCREENS=new Set(['mode','login','scope','intro','name','stage','end','analysis']);
+function onHandResults(res){
+  lastHandFrame=Date.now();
+  const tips=[];
+  if(res.multiHandLandmarks){
+    for(const lm of res.multiHandLandmarks){
+      const t=lm[8];
+      tips.push(videoToScreen(t.x,t.y));
+    }
+  }
+  if(tips.length) lastHandVisible=performance.now(); // 손 감지 시각 갱신
+  if(curScreen==='game'&&gameActive){
+    updateCursors(tips);
+    checkHandCollision(tips);
+  } else if(MENU_SCREENS.has(curScreen)){
+    updateCursors(tips);
+    checkMenuGesture(tips);
+  } else {
+    hideCursors();
+  }
+}
+function clearDwell(){
+  if(dwellTimer){clearTimeout(dwellTimer);dwellTimer=null;}
+  if(dwellEl){dwellEl.classList.remove('gesture-hover','gesture-clicked');dwellEl=null;}
+}
+function checkMenuGesture(tips){
+  if(!tips.length){clearDwell();return;}
+  const tip=tips[0];
+  const btns=document.querySelectorAll('#screen-'+curScreen+' .gesture-btn');
+  let hit=null;
+  for(const btn of btns){
+    if(btn.style.display==='none') continue;
+    const r=btn.getBoundingClientRect();
+    if(tip.x>=r.left&&tip.x<=r.right&&tip.y>=r.top&&tip.y<=r.bottom){hit=btn;break;}
+  }
+  if(!hit){clearDwell();return;}
+  if(hit===dwellEl) return; // 이미 dwell 중
+  clearDwell();
+  dwellEl=hit;
+  hit.classList.add('gesture-hover');
+  dwellTimer=setTimeout(()=>{
+    if(dwellEl){
+      dwellEl.classList.remove('gesture-hover');
+      dwellEl.classList.add('gesture-clicked');
+      const el=dwellEl;
+      dwellEl=null; dwellTimer=null;
+      el.click();
+      setTimeout(()=>el.classList.remove('gesture-clicked'),200);
+    }
+  },DWELL_MS);
+}
+function checkHandCollision(tips){
+  const now=performance.now();
+  if(tips.length) lastHandVisible=now;
+
+  // 손이 완전히 사라짐 → 체류 즉시 취소
+  if(!tips.length){ handDwellEl=null; return; }
+
+  // 보기 카드 감지 (이미 선택된 done 제외)
+  const cards=[...document.querySelectorAll('#quiz-board .opt-card:not(.done)')];
+
+  // 현재 손끝이 올라가 있는 카드 탐색
+  let hitEl=null;
+  outer: for(const el of cards){
+    const r=el.getBoundingClientRect();
+    for(const t of tips){
+      if(t.x>=r.left&&t.x<=r.right&&t.y>=r.top&&t.y<=r.bottom){hitEl=el;break outer;}
+    }
+  }
+
+  // 손끝이 카드 밖에 있음 → 짧은 끊김(지터)은 허용, 그 이상이면 체류 취소
+  if(!hitEl){
+    if(handDwellEl){ handDwellEl.classList.remove('gesture-hover'); }
+    if(handDwellEl && now-handLastOnBubble>HAND_GRACE_MS) handDwellEl=null;
+    return;
+  }
+
+  // 손끝이 카드 위에 있음
+  handLastOnBubble=now;
+
+  // 새 카드로 이동(또는 처음 진입) → 체류 타이머 새로 시작
+  if(hitEl!==handDwellEl){
+    if(handDwellEl) handDwellEl.classList.remove('gesture-hover');
+    handDwellEl=hitEl;
+    handDwellStart=now;
+    hitEl.classList.add('gesture-hover');
+    return;
+  }
+
+  // 같은 카드에 계속 머무는 중 → 0.5초 경과 시에만 반응
+  if(now-handDwellStart>=HAND_DWELL_MS){
+    const el=handDwellEl;
+    handDwellEl=null;  // 중복 방지
+    if(el&&el.isConnected&&!el.classList.contains('done')){
+      el.classList.remove('gesture-hover');
+      lastHandHit=now;
+      selectOption(parseInt(el.dataset.idx));
+    }
+  }
+}
+
+// ═════════════════════════════════════════════
+// MODE SELECT / LOGIN
+// ═════════════════════════════════════════════
+function chooseOffline(){
+  appMode='offline'; school='';
+  localStorage.setItem('spq_mode','offline');
+  isParticipant=false;
+  localStorage.removeItem('spq_participant');
+  enterIntro();
+}
+function chooseOnline(){
+  appMode='online';
+  isParticipant=false;
+  localStorage.removeItem('spq_participant');
+  switchLoginTab('student');
+  show('login');
+}
+
+// ═════════════════════════════════════════════
+// 학교 공유 코드 (방법 1)
+// ═════════════════════════════════════════════
+function switchLoginTab(tab){
+  const ids=['student','code'];
+  ids.forEach(id=>{
+    const btn=document.getElementById('tab-'+id);
+    const panel=document.getElementById('panel-'+id);
+    const active=(id===tab);
+    if(btn){btn.style.background=active?'rgba(255,255,255,.25)':'rgba(255,255,255,.08)';
+             btn.style.color=active?'#fff':'rgba(255,255,255,.7)';}
+    if(panel) panel.style.display=active?'block':'none';
+  });
+}
+
+// 학생이 학교이름 입력 → 참여자 모드로 범위 선택
+function submitStudentLogin(){
+  const s=document.getElementById('student-school').value.trim();
+  if(!s){alert('학교 이름을 입력해주세요.');return;}
+  school=s; appMode='online';
+  localStorage.setItem('spq_mode','online');
+  localStorage.setItem('spq_school',s);
+  settingsUnlocked=false;
+  isParticipant=true;                    // ← 학생 모드: 설정 아이콘 숨김
+  localStorage.setItem('spq_participant','1');
+  enterScopeScreen();                    // → 전체 / 학년 / 학년반 선택
+}
+
+// 관리자 PIN 해시 (분실/역추적 방지용 경량 해시 — 교실용 obfuscation 수준)
+function hashPW(s){
+  s=String(s==null?'':s);
+  let h=5381;
+  for(let i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))>>>0; }
+  // salt 한 번 더 섞기
+  let h2=52711;
+  for(let i=s.length-1;i>=0;i--){ h2=((h2<<5)+h2+s.charCodeAt(i))>>>0; }
+  return (h.toString(36)+'.'+h2.toString(36));
+}
+function getAdminHash(){ return localStorage.getItem('spq_pwh_'+(school||'def'))||''; }
+function setAdminHash(v){ localStorage.setItem('spq_pwh_'+(school||'def'), v); }
+
+function closeQRModal(){
+  document.getElementById('qr-modal').style.display = 'none';
+}
+
+async function applySchoolCode(){
+  const err=document.getElementById('code-err');
+  if(err) err.textContent='';
+  const raw=document.getElementById('code-input').value.trim().toUpperCase();
+  if(!raw){if(err)err.textContent='코드를 입력해주세요.';return;}
+
+  // ── 4글자 단축코드: GAS에서 조회 ──
+  if(/^[A-Z0-9]{2,6}$/.test(raw)){
+    const d=driveCfg();
+    if(!d.url){
+      if(err)err.textContent='GAS URL이 설정되지 않았습니다. 관리자에게 문의하세요.';
+      return;
+    }
+    if(err)err.textContent='⏳ 코드 조회 중...';
+    try{
+      const res=await fetch(d.url+'?action=getCode&code='+raw,{mode:'cors',redirect:'follow'});
+      const j=await res.json();
+      if(!j.ok){if(err)err.textContent='❌ '+(j.error||'코드를 찾을 수 없습니다.');return;}
+      if(err)err.textContent='';
+      _applyCodePayload({s:j.school,sc:j.scope,g:Number(j.grade)||0,c:Number(j.cls)||0,u:j.url,p:j.pwh});
+    }catch(e){
+      if(err)err.textContent='❌ 연결 오류. 인터넷을 확인해주세요.';
+    }
+    return;
+  }
+
+  // ── 구형 HGP: 코드 (하위호환) ──
+  if(!raw.startsWith('HGP:')){if(err)err.textContent='코드 형식이 올바르지 않습니다.';return;}
+  let payload;
+  try{
+    try{payload=JSON.parse(_b64dec(raw.substring(4)));}
+    catch{payload=JSON.parse(decodeURIComponent(escape(atob(raw.substring(4)))));}
+  }catch(e){if(err)err.textContent='코드 해석 오류.';return;}
+  _applyCodePayload({
+    s:payload.s||payload.school||'',
+    sc:payload.sc||payload.scope||'',
+    g:payload.g!==undefined?payload.g:(payload.grade||0),
+    c:payload.c!==undefined?payload.c:(payload.cls||0),
+    u:payload.u||payload.url||'',
+    p:payload.p||payload.pwh||''
+  });
+}
+
+function _applyCodePayload({s,sc,g,c,u,p}){
+  if(!s){alert('코드에 학교명이 없습니다.');return;}
+  school=s; appMode='online';
+  localStorage.setItem('spq_school',s);
+  localStorage.setItem('spq_mode','online');
+  if(u){localStorage.setItem('spq_drive_url',u);localStorage.setItem('spq_drive_enabled','1');}
+  if(p){localStorage.setItem('spq_pwh_'+s,p);}
+  settingsUnlocked=false;
+  isParticipant=true;
+  localStorage.setItem('spq_participant','1');
+  // 범위 타입을 학년/반 값으로부터 결정 (범위 라벨 문자열에 의존하지 않음)
+  //  학교전체(g=0,c=0)→전체 / N학년(g>0,c=0)→학년 / N학년M반(g>0,c>0)→반
+  g=Number(g)||0; c=Number(c)||0;
+  scope=(g>0&&c>0)?'반':(g>0)?'학년':'전체';
+  scopeGrade=g; scopeClass=c;
+  localStorage.setItem('spq_scope',scope);
+  localStorage.setItem('spq_scope_grade',g);
+  localStorage.setItem('spq_scope_class',c);
+  enterIntro();
+}
+
+function enterScopeScreen(){
+  document.getElementById('scope-school-nm').textContent=school;
+  ['sc-s1','sc-s2','sc-s3'].forEach((id,i)=>{
+    document.getElementById(id).style.display=(i===0)?'flex':'none';
+  });
+  show('scope');
+}
+
+function scStep1(s){
+  _psc=s; _psg=0; _pscl=0;
+  if(s==='전체'){
+    _confirmScope();
+  } else {
+    document.getElementById('sc-s2-lbl').textContent=s==='학년'?'학년을 선택하세요':'먼저 학년을 선택하세요';
+    document.querySelectorAll('#sc-s2 .grd-btn').forEach(b=>b.classList.remove('sel'));
+    _showScStep(2);
+  }
+}
+
+function scGrade(g){
+  _psg=g;
+  document.querySelectorAll('#sc-s2 .grd-btn').forEach((b,i)=>{
+    b.classList.toggle('sel', i===g-1);
+  });
+  if(_psc==='학년'){
+    _confirmScope();
+  } else {
+    const grid=document.getElementById('sc-cls-grid');
+    grid.innerHTML='';
+    for(let c=1;c<=10;c++){
+      const b=document.createElement('button');
+      b.className='grd-btn gesture-btn'; b.textContent=c+'반';
+      const _c=c; b.onclick=()=>scCls(_c);
+      grid.appendChild(b);
+    }
+    document.getElementById('sc-s3-lbl').textContent=g+'학년 반을 선택하세요';
+    _showScStep(3);
+  }
+}
+
+function scCls(c){
+  _pscl=c;
+  _confirmScope();
+}
+
+function _confirmScope(){
+  scope=_psc; scopeGrade=_psg; scopeClass=_pscl;
+  localStorage.setItem('spq_scope',scope);
+  localStorage.setItem('spq_scope_grade',scopeGrade);
+  localStorage.setItem('spq_scope_class',scopeClass);
+  enterIntro();
+}
+
+function scBack(from){
+  if(from===2) _showScStep(1);
+  else if(from===3) _showScStep(2);
+}
+
+function _showScStep(n){
+  ['sc-s1','sc-s2','sc-s3'].forEach((id,i)=>{
+    document.getElementById(id).style.display=(i===n-1)?'flex':'none';
+  });
+}
+
+function enterIntro(){
+  updateModeBadge();
+  renderLB();
+  if(driveActive()) refreshCloudLB();
+  show('intro');
+}
+function updateModeBadge(){
+  const b=document.getElementById('mode-badge');
+  if(appMode==='online'){
+    const sc=scope==='학년'?scopeGrade+'학년':scope==='반'?scopeGrade+'학년 '+scopeClass+'반':'전체';
+    b.innerHTML='☁️ <span class="on">온라인</span> · '+school+' · '+sc+(driveActive()?' · 드라이브 연동중':'');
+    document.getElementById('lb-title').textContent='🏆 '+school+' '+sc+' 명예의 전당 (상위 5명)';
+  }else{
+    b.innerHTML='💻 <span class="off">오프라인</span> · 이 기기 저장';
+    document.getElementById('lb-title').textContent='🏆 명예의 전당 (상위 5명)';
+  }
+}
+
+// ═════════════════════════════════════════════
+// LEADERBOARD (scoped local + optional cloud)
+// ═════════════════════════════════════════════
+function getLB(){try{return JSON.parse(localStorage.getItem(lbKey())||'[]');}catch{return[];}}
+function saveLBLocal(lb){localStorage.setItem(lbKey(),JSON.stringify(lb));}
+
+function addScore(result){
+  const lb=getLB();
+  const entry={...result, date:new Date().toLocaleDateString('ko-KR'), ts:new Date().toISOString()};
+  lb.push(entry);
+  lb.sort((a,b)=>b.score-a.score);
+  lb.splice(200); // 최대 200개 보관 (분석용으로 넉넉히)
+  saveLBLocal(lb);
+  renderLB();
+  if(driveActive()) cloudSaveScore(entry);
+  else if(appMode==='online') _setCloudStatus('⚠️ Google Sheets 미연동 — 환경설정에서 GAS URL을 등록하세요','#ffb3b3');
+}
+function renderLB(){
+  const lb=getLB().slice(0,5);
+  const medals=['🥇','🥈','🥉','4️⃣','5️⃣'];
+  const el=document.getElementById('lb-list');
+  if(!lb.length){el.innerHTML='<div style="color:rgba(255,255,255,.5);text-align:center;">아직 기록이 없어요!</div>';return;}
+  el.innerHTML=lb.map((e,i)=>`<div class="lb-row">
+    <span class="lb-rank">${medals[i]}</span>
+    <span class="lb-name">${e.name}</span>
+    <span class="lb-score">${e.score}점</span>
+    <span class="lb-date">${e.date||''}</span>
+  </div>`).join('');
+}
+function clearLB(){
+  if(!confirm('현재 모드의 랭킹을 초기화하시겠습니까?'))return;
+  localStorage.removeItem(lbKey());
+  renderLB();
+  document.getElementById('drive-status').textContent='✅ 현재 랭킹이 초기화되었습니다.';
+}
+async function resetScopeData(sc,g,c,stId){
+  const label=sc==='반'?g+'학년 '+c+'반':sc==='학년'?g+'학년':'학교 전체';
+  if(!confirm('['+label+'] 데이터를 모두 삭제하시겠습니까?\n전체점수·학년점수 탭에서도 함께 삭제됩니다.\n되돌릴 수 없습니다.'))return;
+  const base='spq_lb_online_'+(school||'default');
+  const key=sc==='학년'?base+'_학년_'+g:sc==='반'?base+'_반_'+g+'_'+c:base+'_전체';
+  localStorage.removeItem(key);
+  renderLB();
+  const st=stId?document.getElementById(stId):null;
+  if(st){st.style.color='#ffd93d';st.textContent='⏳ 삭제 중...';}
+  if(driveActive()){
+    const d=driveCfg();
+    try{
+      await fetch(d.url,{method:'POST',mode:'cors',redirect:'follow',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'deleteScope',secret:d.secret,school:school||'',sc,grade:g||0,cls:c||0})});
+      await refreshCloudLB(); // 클라우드 기준으로 전체/학년/반 버킷 재동기화 (cascade 반영)
+      if(st){st.style.color='#ffb3b3';st.textContent='🗑 '+label+' 삭제 완료 (전체·학년·반 탭 동시)';setTimeout(()=>st.textContent='',4000);}
+    }catch(e){
+      if(st){st.style.color='#ffb3b3';st.textContent='🗑 '+label+' 로컬 삭제 완료 (클라우드 연결 실패)';setTimeout(()=>st.textContent='',4000);}
+    }
+  } else {
+    if(st){st.style.color='#ffb3b3';st.textContent='🗑 '+label+' 데이터 초기화 완료';setTimeout(()=>st.textContent='',3000);}
+  }
+}
+function resetClsData(g){
+  const c=_clsSel[g]||1;
+  resetScopeData('반',g,c,'cls'+g+'-status');
+}
+
+// ── Cloud (Google Apps Script) ──
+function _setCloudStatus(msg,color){
+  const el=document.getElementById('cloud-save-status');
+  if(el){el.textContent=msg;el.style.color=color||'rgba(255,255,255,.5)';}
+}
+async function _gasPost(url,body){
+  const res=await fetch(url,{method:'POST',mode:'cors',redirect:'follow',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},body});
+  try{ return await res.json(); }
+  catch(e){ return null; } // null = GAS가 JSON 아닌 응답(HTML 오류페이지 등) 반환
+}
+async function _autoSyncPassword(d){
+  try{
+    await fetch(d.url,{method:'POST',mode:'cors',redirect:'follow',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'setPassword',newPassword:d.secret})});
+  }catch(e){}
+}
+async function cloudSaveScore(entry){
+  const d=driveCfg();
+  _setCloudStatus('☁️ 클라우드 저장 중...','#ffd93d');
+  const body=JSON.stringify({
+    secret:d.secret, school:entry.school||school,
+    name:entry.name, score:entry.score,
+    grade:scopeGrade||0, cls:scopeClass||0,
+    stage:entry.stage||'',
+    wordCount:entry.wordCount||0, totalTarget:entry.totalTarget||20,
+    timeSpent:entry.timeSpent||0, correctRate:entry.correctRate||0,
+    wrongWords:(entry.wrongWords||[]).join(','),
+    completed:entry.completed?1:0
+  });
+  try{
+    const j=await _gasPost(d.url,body);
+    if(j===null){
+      // GAS가 JSON 아닌 응답(HTML 오류페이지) → 배포 오류 또는 접근권한 문제
+      _setCloudStatus('❌ GAS 응답 오류 — Apps Script 배포(액세스: 모든 사용자) 확인 필요','#ff9999');
+    } else if(j&&j.ok===false&&j.error==='비밀번호 불일치'){
+      // 비밀번호 불일치 → 자동 동기화 후 재시도
+      _setCloudStatus('🔄 비밀번호 자동 복구 중...','#ffd93d');
+      await _autoSyncPassword(d);
+      const j2=await _gasPost(d.url,body);
+      if(j2===null||( j2&&j2.ok===false)){
+        _setCloudStatus('❌ 저장 실패: '+(j2&&j2.error?j2.error:'GAS 오류'),'#ff9999');
+      } else {
+        _setCloudStatus('✅ 클라우드 저장 완료 (자동 복구)','#6bcb77');
+        setTimeout(refreshCloudLB,1000);
+      }
+    } else if(j&&j.ok===false){
+      _setCloudStatus('❌ 저장 실패: '+(j.error||'GAS 오류'),'#ff9999');
+    } else if(j&&j.ok===true){
+      _setCloudStatus('✅ 클라우드 저장 완료','#6bcb77');
+      setTimeout(refreshCloudLB,1000);
+    } else {
+      // ok 필드 없는 비정상 응답
+      _setCloudStatus('❌ GAS 응답 형식 오류 — 스크립트 코드를 다시 붙여넣고 재배포하세요','#ff9999');
+      console.warn('비정상 GAS 응답:',j);
+    }
+  }catch(e){
+    console.warn('cloudSaveScore 오류:',e);
+    _setCloudStatus('❌ 연결 실패 (로컬엔 저장됨)','#ff9999');
+  }
+}
+async function refreshCloudLB(){
+  if(!driveActive())return;
+  const d=driveCfg();
+  try{
+    const res=await fetch(d.url,{method:'GET',mode:'cors',redirect:'follow'});
+    const j=await res.json();
+    if(j&&j.rows){
+      const base='spq_lb_online_'+(school||'default');
+      const buckets={};  // localStorage key → entries[]
+
+      j.rows
+        .filter(r=>String(r.school)===String(school))
+        .forEach(r=>{
+          const entry={
+            name:r.name, score:Number(r.score)||0,
+            stage:r.stage,
+            wordCount:Number(r.wordCount)||0, totalTarget:Number(r.totalTarget)||20,
+            timeSpent:Number(r.timeSpent)||0, correctRate:Number(r.correctRate)||0,
+            wrongWords:r.wrongWords?String(r.wrongWords).split(',').filter(w=>w):[],
+            completed:Number(r.completed)===1,
+            date:r.date, ts:r.date
+          };
+          const g=Number(r.grade)||0, c=Number(r.cls)||0;
+
+          // 학교전체 bucket (항상)
+          const k0=base+'_전체';
+          if(!buckets[k0]) buckets[k0]=[];
+          buckets[k0].push(entry);
+
+          // 학년 bucket
+          if(g>0){
+            const k1=base+'_학년_'+g;
+            if(!buckets[k1]) buckets[k1]=[];
+            buckets[k1].push(entry);
+
+            // 학년반 bucket
+            if(c>0){
+              const k2=base+'_반_'+g+'_'+c;
+              if(!buckets[k2]) buckets[k2]=[];
+              buckets[k2].push(entry);
+            }
+          }
+        });
+
+      // 각 bucket을 localStorage에 저장 (최대 200개, 점수순 정렬)
+      Object.keys(buckets).forEach(key=>{
+        const arr=buckets[key].sort((a,b)=>b.score-a.score).slice(0,200);
+        localStorage.setItem(key, JSON.stringify(arr));
+      });
+      renderLB();
+    }
+  }catch(e){console.warn('클라우드 불러오기 실패(로컬 기록 표시):',e);}
+}
+
+// ═════════════════════════════════════════════
+// ANALYSIS
+// ═════════════════════════════════════════════
+function openAnalysis(){
+  _prepAnalysisUI(scope, scopeGrade, scopeClass, false);
+}
+
+function getFilteredData(){
+  let data;
+  if(_anScopeOverride){
+    data=[...getLBForScope(_anScopeOverride.sc,_anScopeOverride.g,_anScopeOverride.c)];
+  } else {
+    data=[...getLB()];
+  }
+  const stageF=document.getElementById('an-filter-stage').value;
+  const nameF=document.getElementById('an-filter-name').value;
+  const sortF=document.getElementById('an-sort').value;
+  if(stageF) data=data.filter(e=>String(e.stage)===stageF);
+  if(nameF)  data=data.filter(e=>e.name===nameF);
+  if(sortF==='score') data.sort((a,b)=>b.score-a.score);
+  else if(sortF==='name') data.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else data.sort((a,b)=>(b.ts||b.date||'').localeCompare(a.ts||a.date||''));
+  return data;
+}
+
+function renderAnalysis(){
+  const data=getFilteredData();
+  // 통계
+  const cnt=data.length;
+  const avgScore=cnt?+(data.reduce((s,e)=>s+(e.score||0),0)/cnt).toFixed(1):0;
+  const avgAcc=cnt?+(data.reduce((s,e)=>s+(e.correctRate||0),0)/cnt).toFixed(1):0;
+  const avgTime=cnt?Math.round(data.reduce((s,e)=>s+(e.timeSpent||0),0)/cnt):0;
+  const uniqueStudents=new Set(data.map(e=>e.name)).size;
+
+  document.getElementById('an-stats').innerHTML=`
+    <div class="an-stat"><div class="sv">${cnt}</div><div class="sl">총 플레이 횟수</div></div>
+    <div class="an-stat"><div class="sv">${uniqueStudents}</div><div class="sl">참여 학생 수</div></div>
+    <div class="an-stat"><div class="sv">${avgScore}</div><div class="sl">평균 점수</div></div>
+    <div class="an-stat"><div class="sv">${avgAcc}%</div><div class="sl">평균 정답률</div></div>
+    <div class="an-stat"><div class="sv">${avgTime}초</div><div class="sl">평균 소요 시간</div></div>
+  `;
+
+  // 테이블
+  const tbody=document.getElementById('an-tbody');
+  if(!data.length){
+    tbody.innerHTML='<tr><td colspan="8" class="an-empty">기록이 없습니다.</td></tr>';
+  } else {
+    tbody.innerHTML=data.map(e=>`
+      <tr>
+        <td>${e.name||'-'}</td>
+        <td>${e.stage!=null?(STAGE_NAME[e.stage]||e.stage):'-'}</td>
+        <td style="color:#ffd93d;font-weight:800;">${e.score||0}</td>
+        <td>${e.wordCount!=null?e.wordCount+'/'+(e.totalTarget||20):'-'}</td>
+        <td>${e.timeSpent!=null?e.timeSpent+'초':'-'}</td>
+        <td style="color:${(e.correctRate||0)>=80?'#6bcb77':'#ffb3b3'}">${e.correctRate!=null?e.correctRate+'%':'-'}</td>
+        <td style="font-size:.8rem;color:rgba(255,255,255,.55)">${e.date||'-'}</td>
+      </tr>
+    `).join('');
+  }
+
+  // 오답 분석
+  const wrongMap={};
+  data.forEach(e=>{if(e.wrongWords)e.wrongWords.forEach(w=>{wrongMap[w]=(wrongMap[w]||0)+1;});});
+  const topWrong=Object.entries(wrongMap).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const wg=document.getElementById('an-wrong-grid');
+  if(!topWrong.length){
+    wg.innerHTML='<div class="an-empty" style="grid-column:1/-1">오답 데이터가 없습니다. 🎉</div>';
+  } else {
+    wg.innerHTML=topWrong.map(([word,cnt])=>`
+      <div class="an-wrong-card">
+        <div class="ww">${word}</div>
+        <div class="wc">${cnt}번 틀림</div>
+      </div>
+    `).join('');
+  }
+  // 성장 추이 차트 (학생 필터 적용 시)
+  renderGrowthChart(document.getElementById('an-filter-name').value);
+}
+
+function _makeSheet(lb){
+  const header=['이름','단계','점수','완료단어','총단어','소요시간(초)','정답률(%)','틀린단어','날짜'];
+  const rows=lb.map(e=>[
+    e.name||'',
+    e.stage!=null?(STAGE_NAME[e.stage]||e.stage):'',
+    e.score||0,
+    e.wordCount||0,
+    e.totalTarget||20,
+    e.timeSpent||0,
+    e.correctRate||0,
+    (e.wrongWords||[]).join(', '),
+    e.date||''
+  ]);
+  const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
+  ws['!cols']=[{wch:12},{wch:8},{wch:8},{wch:8},{wch:10},{wch:8},{wch:10},{wch:10},{wch:30},{wch:12}];
+  return ws;
+}
+function downloadAsExcel(){
+  const wb=XLSX.utils.book_new();
+  const base='spq_lb_online_'+(school||'default');
+  const tryAdd=(key,tabName)=>{
+    try{const lb=JSON.parse(localStorage.getItem(key)||'[]');
+      if(lb.length) XLSX.utils.book_append_sheet(wb,_makeSheet(lb),tabName);}
+    catch(e){}
+  };
+  if(appMode==='offline'){
+    const lb=JSON.parse(localStorage.getItem('spq_lb_offline')||'[]');
+    if(!lb.length){alert('다운로드할 데이터가 없습니다.');return;}
+    XLSX.utils.book_append_sheet(wb,_makeSheet(lb),'오프라인');
+  } else {
+    tryAdd(base+'_전체','전체');
+    for(let g=1;g<=6;g++) tryAdd(base+'_학년_'+g, g+'학년');
+    for(let g=1;g<=6;g++) for(let c=1;c<=10;c++) tryAdd(base+'_반_'+g+'_'+c, g+'학년'+c+'반');
+    if(!wb.SheetNames.length){alert('다운로드할 데이터가 없습니다.');return;}
+  }
+  XLSX.writeFile(wb,`${school||'오프라인'}_전체_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+// ═════════════════════════════════════════════
+// VOICE RECOGNITION
+// ═════════════════════════════════════════════
+function goNameScreen(){show('name');startVoice();}
+function startVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  document.getElementById('mic-icon').style.animation='micpulse 1s ease-in-out infinite';
+  document.getElementById('mic-icon').textContent='🎤';
+  document.getElementById('rec-name').textContent='듣는 중...';
+  document.getElementById('confirm-btn').style.display='none';
+  playerName='';
+  if(!SR){showManual();return;}
+  recognition=new SR();
+  recognition.lang='ko-KR';recognition.continuous=false;recognition.interimResults=true;
+  recognition.onresult=(e)=>{
+    let t='';
+    for(let i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript;
+    const isFinal=e.results[e.results.length-1].isFinal;
+    // Chrome이 한국어 인식 끝에 마침표를 붙이므로 끝 문장부호 제거
+    const clean=t.trim().replace(/[.。，,!?！？\s]+$/,'');
+    document.getElementById('rec-name').textContent = isFinal ? clean : t; // 표시도 정리된 이름으로
+    if(isFinal){
+      playerName=clean;
+      document.getElementById('confirm-btn').style.display='inline-block';
+      document.getElementById('mic-icon').style.animation='none';
+      document.getElementById('mic-icon').textContent='✅';
+    }
+  };
+  recognition.onerror=()=>{document.getElementById('mic-icon').textContent='❌';
+    document.getElementById('rec-name').textContent='인식 실패. 직접 입력하세요.';showManual();};
+  recognition.onend=()=>{if(!playerName)showManual();};
+  try{recognition.start();}catch(e){showManual();}
+}
+function showManual(){
+  document.getElementById('mic-icon').textContent='⌨️';
+  document.getElementById('mic-icon').style.animation='none';
+  document.getElementById('rec-name').innerHTML=
+    '<input id="manual-inp" type="text" placeholder="이름을 입력하세요" style="font-size:1.5rem;padding:10px 18px;border-radius:12px;border:2px solid #ffd93d;background:rgba(255,255,255,.1);color:#fff;text-align:center;font-family:inherit;width:260px;">';
+  document.getElementById('manual-inp').addEventListener('input',e=>{
+    playerName=e.target.value.trim();
+    document.getElementById('confirm-btn').style.display=playerName?'inline-block':'none';
+  });
+}
+function restartVoice(){if(recognition)try{recognition.abort();}catch(e){}startVoice();}
+function confirmName(){
+  if(!playerName)return;
+  document.getElementById('pname-disp').textContent=playerName;
+  document.querySelectorAll('.s-btn').forEach(b=>b.classList.remove('sel'));
+  const sb=document.getElementById('start-btn');
+  sb.style.opacity='0.3'; sb.style.pointerEvents='none';
+  sb.style.background='rgba(67,233,123,.18)'; sb.style.borderColor='rgba(67,233,123,.45)';
+  stage=0;
+  show('stage');
+}
+
+// ═════════════════════════════════════════════
+// STAGE / SPEED
+// ═════════════════════════════════════════════
+function selectStage(n){
+  stage=n;
+  document.querySelectorAll('.s-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('stage-btn-'+n).classList.add('sel');
+  const sb=document.getElementById('start-btn');
+  sb.style.opacity='1'; sb.style.pointerEvents='auto';
+  sb.style.background='linear-gradient(135deg,#43e97b,#38f9d7)';
+  sb.style.borderColor='transparent';
+}
+
+// ═════════════════════════════════════════════
+// COUNTDOWN → GAME
+// ═════════════════════════════════════════════
+function beginCountdown(){
+  if(!stage){alert('단계를 선택해주세요!');return;}
+  try{getAC().resume();}catch(e){}  // AudioContext 활성화 (사용자 제스처 컨텍스트)
+  startBGM();
+  show('countdown');
+  let n=3;const el=document.getElementById('countdown-num');el.textContent=n;
+  const tick=()=>{
+    n--;
+    if(n>0){el.style.animation='none';el.offsetHeight;el.textContent=n;el.style.animation='popIn .4s ease-out';setTimeout(tick,900);}
+    else{el.textContent='시작!';el.style.animation='none';el.offsetHeight;el.style.animation='popIn .4s ease-out';setTimeout(startGame,800);}
+  };
+  setTimeout(tick,900);
+}
+
+// ═════════════════════════════════════════════
+// GAME
+// ═════════════════════════════════════════════
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]];}return b;}
+
+function startGame(){
+  gameActive=true;gameLocked=false;timeLeft=60;wordsDone=0;comboCount=0;
+  wrongWordsSession=[];wrongClickCount=0;gameStartTime=Date.now();
+  const pool=getPool(stage);
+  wordQueue=buildAdaptiveQueue(pool,20);
+  document.getElementById('hud-pname').textContent=playerName;
+  document.getElementById('hud-pscore').textContent=playerScore+'점';
+  document.getElementById('hud-stage').textContent=STAGE_NAME[stage]||'';
+  document.querySelector('.qc-label').textContent=handReady?'✋ 손으로 알맞은 속담을 가리키세요!':'이 뜻에 맞는 속담은?';
+  show('game');
+  nextTarget();updateTimer();
+  timerInt=setInterval(()=>{timeLeft--;updateTimer();if(timeLeft<=0)endGame(false);},1000);
+}
+function updateTimer(){
+  const el=document.getElementById('hud-timer');
+  el.textContent='⏱ '+timeLeft+'초';
+  timeLeft<=10?el.classList.add('warn'):el.classList.remove('warn');
+}
+const OC_POS=['oc-n','oc-e','oc-s','oc-w'];
+const OC_NUM=['①','②','③','④'];
+function nextTarget(){
+  if(wordsDone>=20){endGame(true);return;}
+  currentTarget=wordQueue[wordsDone];
+  // 보기 4개: 정답 + 같은 단계 오답 3개 (무작위 위치)
+  const distract=shuffle(getPool(stage).filter(x=>x.i!==currentTarget.i)).slice(0,3);
+  currentOptions=shuffle([currentTarget,...distract]);
+  renderOptions();
+  const cm=document.getElementById('qc-mean');
+  cm.style.animation='none';cm.offsetHeight;cm.style.animation='';
+  cm.textContent=currentTarget.m;
+  document.getElementById('qc-sub').textContent='( '+(wordsDone+1)+' / 20 )';
+  document.getElementById('hud-prog').textContent='남은 속담: '+(20-wordsDone)+'개';
+}
+function renderOptions(){
+  currentOptions.forEach((opt,idx)=>{
+    const el=document.getElementById('opt-'+idx);
+    el.className='opt-card gesture-btn '+OC_POS[idx];
+    el.dataset.idx=idx;
+    el.innerHTML='<span class="oc-num">'+OC_NUM[idx]+'</span><span class="oc-i">'+opt.i+'</span>';
+  });
+}
+function selectOption(idx){
+  if(!gameActive||gameLocked)return;
+  const el=document.getElementById('opt-'+idx);
+  if(!el||el.classList.contains('done'))return;
+  const opt=currentOptions[idx];
+  if(!opt)return;
+  const r=el.getBoundingClientRect();
+  const cx=r.left+r.width/2,cy=r.top+r.height/2;
+  if(opt.i===currentTarget.i){
+    // 정답
+    el.classList.add('correct','done');
+    const gained=PTS[stage];
+    playerScore+=gained;comboCount++;
+    document.getElementById('hud-pscore').textContent=playerScore+'점';
+    const sp=document.createElement('div');
+    sp.className='score-pop';sp.textContent='+'+gained;
+    sp.style.left=cx+'px';sp.style.top=cy+'px';
+    sp.style.animation='scorePop .8s ease-out forwards';
+    document.body.appendChild(sp);setTimeout(()=>sp.remove(),850);
+    boom(cx,cy,currentTarget.i);playOK(comboCount);flashScreen();
+    if(comboCount>=3)showCombo(comboCount);
+    gameLocked=true;wordsDone++;
+    setTimeout(()=>{gameLocked=false;nextTarget();},650);
+  }else{
+    // 오답: 해당 보기 비활성화 + 감점 (정답 맞힐 때까지 계속 시도)
+    comboCount=0;wrongClickCount++;
+    if(!wrongWordsSession.includes(currentTarget.i)) wrongWordsSession.push(currentTarget.i);
+    const pen=PEN[stage]||0;
+    playerScore=Math.max(0,playerScore-pen);
+    document.getElementById('hud-pscore').textContent=playerScore+'점';
+    el.classList.add('wrong','done');
+    const wo=document.getElementById('wrong-overlay');
+    wo.style.display='block';setTimeout(()=>wo.style.display='none',420);
+    const p=document.createElement('div');
+    p.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;font-size:5rem;font-weight:900;color:#ff2020;text-shadow:0 0 24px #ff0000,0 3px 8px #000;pointer-events:none;';
+    p.textContent='-'+pen;
+    document.body.appendChild(p);setTimeout(()=>p.remove(),600);
+  }
+}
+function endGame(completed){
+  gameActive=false;clearInterval(timerInt);clearInterval(spawnInt);
+  stopBGM();
+  addWrongHistory(wrongWordsSession);
+  const timeSpent=Math.round((Date.now()-gameStartTime)/1000);
+  const totalAttempts=wordsDone+wrongClickCount;
+  const correctRate=totalAttempts>0?+(wordsDone/totalAttempts*100).toFixed(1):100;
+  addScore({
+    name:playerName, score:playerScore,
+    stage, wordCount:wordsDone, totalTarget:20,
+    timeSpent, correctRate,
+    wrongWords:[...wrongWordsSession],
+    completed,
+    school:school||'', scope:scope||'전체',
+    scopeGrade:scopeGrade||0, scopeClass:scopeClass||0
+  });
+  document.getElementById('end-title').textContent=completed?'🎉 속담 마스터!':'⏰ 시간 종료!';
+  document.getElementById('end-score-val').textContent=playerScore;
+  document.getElementById('end-words').textContent='맞힌 속담: '+wordsDone+'개';
+  // 이어서 하기 버튼: 다음 단계 표시 (저→중→고)
+  const ns=Math.min(stage+1,3);
+  document.querySelector('.opt-a').textContent=stage<3?'✅ 가. '+STAGE_NAME[ns]+'으로 이어서 하기':'✅ 가. 고학년 다시 하기';
+  show('end');
+}
+
+// ── POST GAME OPTIONS ──
+function optContinue(){
+  // 다음 단계로 자동 진행 (최대 고학년), 카운트다운 즉시 시작
+  stage=Math.min(stage+1,3);
+  beginCountdown();
+}
+function optNewPlayer(){
+  playerName='';playerScore=0;comboCount=0;stage=0;
+  document.querySelectorAll('.s-btn').forEach(b=>b.classList.remove('sel'));
+  const sb2=document.getElementById('start-btn');
+  sb2.style.opacity='0.3'; sb2.style.pointerEvents='none';
+  sb2.style.background='rgba(67,233,123,.18)'; sb2.style.borderColor='rgba(67,233,123,.45)';
+  show('name');startVoice();
+}
+function optQuit(){
+  playerScore=0;playerName='';stage=0;comboCount=0;
+  enterIntro();
+}
+
+// ═════════════════════════════════════════════
+// EFFECTS
+// ═════════════════════════════════════════════
+function boom(x,y,word){
+  const p=document.createElement('div');
+  p.className='pop-txt';p.textContent='✨'+word+'✨';
+  p.style.left=x+'px';p.style.top=y+'px';
+  document.body.appendChild(p);setTimeout(()=>p.remove(),600);
+  const colors=['#ff6b6b','#ffd93d','#6bcb77','#4cc9f0','#b464ff','#fff'];
+  for(let i=0;i<14;i++){
+    const pt=document.createElement('div');pt.className='particle';
+    pt.style.left=x+'px';pt.style.top=y+'px';pt.style.background=colors[i%colors.length];
+    const ang=(i/14)*360,dist=70+Math.random()*90;
+    pt.style.setProperty('--tx',Math.cos(ang*Math.PI/180)*dist+'px');
+    pt.style.setProperty('--ty',Math.sin(ang*Math.PI/180)*dist+'px');
+    pt.style.animation=`pfly ${.45+Math.random()*.3}s ease-out forwards`;
+    document.body.appendChild(pt);setTimeout(()=>pt.remove(),850);
+  }
+}
+function flashScreen(){
+  const f=document.getElementById('flash-overlay');
+  f.style.display='block';f.style.animation='none';f.offsetHeight;
+  f.style.background='rgba(255,255,120,.4)';f.style.animation='flashAnim .32s ease-out forwards';
+  setTimeout(()=>f.style.display='none',360);
+}
+function showCombo(n){
+  const el=document.getElementById('combo-disp');
+  el.textContent=n+'콤보! 🔥';
+  el.style.display='block';el.style.animation='none';el.offsetHeight;
+  el.style.animation='comboAnim .85s ease-out forwards';
+  setTimeout(()=>el.style.display='none',900);
+}
+function getAC(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function playOK(combo){
+  try{
+    const ctx=getAC();
+    const notes=combo>=3?[523,659,784,1047,1319]:[523,659,784,1047];
+    notes.forEach((freq,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.value=freq;
+      const t=ctx.currentTime+i*.08;
+      g.gain.setValueAtTime(.22,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);
+      o.start(t);o.stop(t+.26);
+    });
+  }catch(e){}
+}
+
+// ═════════════════════════════════════════════
+// SETTINGS (gated)
+// ═════════════════════════════════════════════
+function openSettings(){
+  beforeSettings=(curScreen==='settings')?'intro':curScreen;
+  document.getElementById('gate-school').value='';
+  document.getElementById('gate-pw').value='';
+  document.getElementById('gate-err').textContent='';
+  if(settingsUnlocked){revealSettings();}
+  else{
+    document.getElementById('set-lock').style.display='flex';
+    document.getElementById('set-content').style.display='none';
+  }
+  show('settings');
+}
+function unlockSettings(){
+  const enteredSchool=document.getElementById('gate-school').value.trim();
+  const p=document.getElementById('gate-pw').value;
+  const err=document.getElementById('gate-err');
+  if(!enteredSchool){err.textContent='학교 이름을 입력해주세요.';return;}
+  // 입력한 학교명으로 저장된 해시/비번 조회
+  const storedHash=localStorage.getItem('spq_pwh_'+enteredSchool)||'';
+  const storedPW=localStorage.getItem('spq_pw_admin_'+enteredSchool)||'0000';
+  // 해시가 있으면 해시로 검증, 없으면 평문 비교(최초 설정 기기)
+  const ok=storedHash?(hashPW(p)===storedHash):(p===storedPW);
+  if(!ok){err.textContent='학교 이름 또는 비밀번호가 올바르지 않습니다.';return;}
+  // 입력한 학교가 현재 세션 학교와 다르면 전환
+  if(enteredSchool!==school){
+    school=enteredSchool;
+    appMode='online';
+    localStorage.setItem('spq_school',enteredSchool);
+    localStorage.setItem('spq_mode','online');
+    isParticipant=false;
+    localStorage.removeItem('spq_participant');
+  }
+  // 관리자 기기로 승격
+  setAdminPW(p);
+  settingsUnlocked=true;
+  revealSettings();
+}
+function revealSettings(){
+  document.getElementById('set-lock').style.display='none';
+  document.getElementById('set-content').style.display='block';
+  const d=driveCfg();
+  document.getElementById('drive-url').value=d.url;
+  document.getElementById('drive-secret').value=d.secret;
+  document.getElementById('drive-enabled').checked=d.enabled;
+  document.getElementById('hand-enabled').checked=handTrackingEnabled();
+  document.getElementById('bgm-enabled').checked=bgmEnabled();
+  document.getElementById('bgm-status').textContent='';
+  updatePWStrength('');
+  document.getElementById('pw-status').textContent='';
+  document.getElementById('drive-status').textContent='';
+  // 참여코드 섹션: 온라인 전용
+  document.getElementById('sec-code-analysis').style.display=appMode==='online'?'block':'none';
+  // 코드 표시 영역 초기화
+  // 학교전체 코드 복원
+  (function(){
+    const a=document.getElementById('whole-code-area');
+    const disp=document.getElementById('whole-code-disp');
+    const s=document.getElementById('whole-status'); if(s) s.textContent='';
+    const code=_getCodeLocal('전체',0,0);
+    if(code){ if(a) a.style.display='block'; _setCodeDisp(disp,code); }
+    else if(a) a.style.display='none';
+  })();
+  // 학년별: 선택 초기화(1학년) + 선택 학년 코드 복원
+  _gradeSel=1;
+  document.querySelectorAll('#grade-grid .cls-btn').forEach((btn,i)=>{
+    btn.classList.toggle('sel',i===0);
+  });
+  const grdSt=document.getElementById('grd-status'); if(grdSt) grdSt.textContent='';
+  _refreshGradeCodeDisp();
+  // 학년반별: 반 선택 초기화(1반) + 선택 반 코드 복원
+  [1,2,3,4,5,6].forEach(g=>{
+    const s=document.getElementById('cls'+g+'-status'); if(s) s.textContent='';
+    _clsSel[g]=1;
+    document.querySelectorAll('#cls'+g+'-grid .cls-btn').forEach((btn,i)=>{
+      btn.classList.toggle('sel',i===0);
+    });
+    _refreshClsCodeDisp(g);
+  });
+  fillSchoolSettings();
+  renderWordPreviews(getCustom());
+}
+function closeSettings(){
+  settingsUnlocked=false;
+  const dest=beforeSettings||'intro';
+  if(dest==='intro'){enterIntro();}  // 인트로로 돌아갈 땐 enterIntro() 사용 (분석 버튼 포함)
+  else{show(dest);}
+}
+
+function changeAdminPW(){
+  const cur=document.getElementById('pw-cur').value;
+  const nw=document.getElementById('pw-new').value;
+  const st=document.getElementById('pw-status');
+  if(cur!==getAdminPW()){st.style.color='#ffb3b3';st.textContent='❌ 현재 비밀번호가 올바르지 않습니다.';return;}
+  if(!nw||nw.length<4){st.style.color='#ffb3b3';st.textContent='❌ 새 비밀번호는 4자 이상 입력하세요.';return;}
+  const _str=checkPWStrength(nw);
+  setAdminPW(nw);
+  document.getElementById('pw-cur').value='';document.getElementById('pw-new').value='';
+  updatePWStrength('');
+  st.style.color='#6bcb77';st.textContent='✅ 비밀번호가 변경되었습니다. (강도: '+_str.label+')';
+}
+
+function fillSchoolSettings(){
+  document.getElementById('set-school-inp').value=school||'';
+  document.getElementById('school-st').textContent='';
+}
+function saveSchoolName(){
+  const v=document.getElementById('set-school-inp').value.trim();
+  const st=document.getElementById('school-st');
+  if(!v){st.style.color='#ffb3b3';st.textContent='❌ 학교 이름을 입력해주세요.';return;}
+  school=v;
+  localStorage.setItem('spq_school',v);
+  updateModeBadge();
+  fillSchoolSettings();
+  st.style.color='#6bcb77';st.textContent='✅ 학교 이름이 변경되었습니다.';
+}
+function changeScopeFromSettings(){
+  closeSettings();
+  enterScopeScreen();
+}
+function switchToOffline(){
+  if(!confirm('오프라인으로 전환하시겠습니까? 오프라인 기록은 이 기기에만 저장됩니다.'))return;
+  appMode='offline';school='';scope='전체';scopeGrade=0;scopeClass=0;
+  localStorage.setItem('spq_mode','offline');
+  closeSettings();
+  enterIntro();
+}
+function switchToOnline(){
+  closeSettings();
+  show('login');
+}
+
+// ── 스코프별 분석 ──
+let _anScopeOverride=null, _analysisFromSettings=false;
+function getLBForScope(sc,g,c){
+  try{
+    const b='spq_lb_online_'+(school||'default');
+    if(sc==='학년') return JSON.parse(localStorage.getItem(b+'_학년_'+g)||'[]');
+    if(sc==='반')   return JSON.parse(localStorage.getItem(b+'_반_'+g+'_'+c)||'[]');
+    return JSON.parse(localStorage.getItem(b+'_전체')||'[]');
+  }catch{return[];}
+}
+function _refreshAnalysisNameFilter(){
+  const ov=_anScopeOverride;
+  const lb=ov?getLBForScope(ov.sc,ov.g,ov.c):getLB();
+  const names=[...new Set(lb.map(e=>e.name))].sort();
+  const sel=document.getElementById('an-filter-name');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">모든 학생</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join('');
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur; // 선택 유지
+}
+function _prepAnalysisUI(sc,g,c,fromSettings){
+  _anScopeOverride = fromSettings?{sc,g,c}:null;
+  _analysisFromSettings = fromSettings;
+  const scopeTxt=sc==='반'?g+'학년 '+c+'반':sc==='학년'?g+'학년':'전체';
+  document.getElementById('an-scope-info').textContent=(appMode==='online'?(school?school+' · ':''):'')+scopeTxt+' 학생 기록';
+  document.getElementById('an-filter-stage').value='';
+  document.getElementById('an-sort').value='date';
+  document.getElementById('an-cloud-status').textContent='';
+  _refreshAnalysisNameFilter();
+  renderAnalysis();
+  show('analysis');
+  // GAS 연동 시: 즉시 1회 동기화 → 실시간 폴링 시작
+  if(driveActive()){
+    syncAndRefreshAnalysis().then(startAnalysisPolling);
+  }
+}
+// 결과분석 화면 범위의 기록 개수 (새 기록 감지용)
+function _anScopeCount(){
+  const ov=_anScopeOverride;
+  const lb=ov?getLBForScope(ov.sc,ov.g,ov.c):getLB();
+  return lb.length;
+}
+async function syncAndRefreshAnalysis(){
+  const st=document.getElementById('an-cloud-status');
+  if(st){st.style.color='rgba(255,255,255,.55)';st.textContent='☁️ 클라우드 동기화 중...';}
+  await refreshCloudLB();
+  _refreshAnalysisNameFilter();
+  renderAnalysis();
+  _anLastCount=_anScopeCount();
+  if(st){st.style.color='#6bcb77';st.textContent='🟢 실시간 반영 중 · 10초마다 자동 갱신';}
+}
+// ── 결과분석 실시간 폴링 (10초 간격) ──
+let _anPollTimer=null, _anLastCount=-1;
+function startAnalysisPolling(){
+  stopAnalysisPolling();
+  if(!driveActive()) return;
+  _anPollTimer=setInterval(async()=>{
+    if(curScreen!=='analysis'||!driveActive()){stopAnalysisPolling();return;}
+    try{ await refreshCloudLB(); }catch(e){ return; }
+    const cnt=_anScopeCount();
+    if(cnt!==_anLastCount){            // 새 기록이 들어왔을 때만 갱신
+      _anLastCount=cnt;
+      _refreshAnalysisNameFilter();
+      renderAnalysis();
+      const st=document.getElementById('an-cloud-status');
+      if(st){
+        st.style.color='#ffd93d';
+        st.textContent='🔔 새 기록 반영됨 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        setTimeout(()=>{if(curScreen==='analysis'&&st){st.style.color='#6bcb77';st.textContent='🟢 실시간 반영 중 · 10초마다 자동 갱신';}},2500);
+      }
+    }
+  },10000);
+}
+function stopAnalysisPolling(){
+  if(_anPollTimer){clearInterval(_anPollTimer);_anPollTimer=null;}
+}
+function openScopeAnalysis(sc,g,c){
+  _prepAnalysisUI(sc,g,c,true);
+}
+function openClsAnalysis(g){
+  openScopeAnalysis('반',g,_clsSel[g]||1);
+}
+function closeAnalysis(){
+  stopAnalysisPolling();
+  const fromSet=_analysisFromSettings;
+  _anScopeOverride=null; _analysisFromSettings=false;
+  if(fromSet&&settingsUnlocked) openSettings();
+  else enterIntro();
+}
+
+// ── 참여코드 생성 ──
+// ── base64url (+ → -, / → _, = 제거) : 카톡/메일 복사 시 깨짐 방지 ──
+function _b64enc(str){
+  return btoa(unescape(encodeURIComponent(str)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function _b64dec(b64u){
+  const s=b64u.replace(/-/g,'+').replace(/_/g,'/');
+  const pad='='.repeat((4-s.length%4)%4);
+  return decodeURIComponent(escape(atob(s+pad)));
+}
+
+// ── 학년 선택 그리드 (학년별 관리) ──
+let _gradeSel=1; // 현재 선택된 학년
+function selectGrade(g){
+  _gradeSel=g;
+  document.querySelectorAll('#grade-grid .cls-btn').forEach((btn,i)=>{
+    btn.classList.toggle('sel',i+1===g);
+  });
+  _refreshGradeCodeDisp();
+}
+function _refreshGradeCodeDisp(){
+  const g=_gradeSel;
+  const area=document.getElementById('grd-code-area');
+  const disp=document.getElementById('grd-code-disp');
+  const lbl=document.getElementById('grd-code-lbl');
+  const code=_getCodeLocal('학년',g,0);
+  if(code){
+    if(lbl) lbl.textContent=g+'학년 참여코드';
+    if(area) area.style.display='block';
+    _setCodeDisp(disp,code);
+  }else{
+    if(area) area.style.display='none';
+    if(disp) disp.value='';
+    if(lbl) lbl.textContent='';
+  }
+}
+function openGradeAnalysis(){ openScopeAnalysis('학년',_gradeSel,0); }
+function generateGradeCode(){
+  const lbl=document.getElementById('grd-code-lbl');
+  if(lbl) lbl.textContent=_gradeSel+'학년 참여코드';
+  generateScopeCode('학년',_gradeSel,0,'grd');
+}
+function resetGradeData(){ resetScopeData('학년',_gradeSel,0,'grd-status'); }
+function copyGradeCode(){ copyScopeCode('grd'); }
+function showGradeQR(){ showScopeQR('grd'); }
+
+// ── 반 선택 그리드 ──
+let _clsSel={1:1,2:1,3:1,4:1,5:1,6:1}; // 학년별 선택된 반
+function selectCls(g,c){
+  _clsSel[g]=c;
+  document.querySelectorAll('#cls'+g+'-grid .cls-btn').forEach((btn,i)=>{
+    btn.classList.toggle('sel',i+1===c);
+  });
+  _refreshClsCodeDisp(g); // 선택한 반의 코드 실시간 표시
+}
+
+// ── 참여코드 표시 헬퍼 ───────────────────────────────────
+function _setCodeDisp(disp,code){
+  if(!disp) return;
+  disp.value=code;
+  if(code.length<=6){
+    // 4글자 단축코드: 크고 굵게
+    disp.style.fontSize='2rem';disp.style.letterSpacing='.4em';
+    disp.style.fontWeight='900';disp.style.textAlign='center';
+  }else{
+    // 구형 HGP: 코드: 작게
+    disp.style.fontSize='.76rem';disp.style.letterSpacing='0';
+    disp.style.fontWeight='normal';disp.style.textAlign='left';
+  }
+}
+
+// ── 4글자 단축코드 헬퍼 ──────────────────────────────────
+function _genCode(){
+  // I, O 제외(혼동 방지) → 4글자 랜덤 대문자+숫자
+  const ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c=''; for(let i=0;i<4;i++) c+=ch[Math.floor(Math.random()*ch.length)]; return c;
+}
+// ── 생성된 참여코드 로컬 저장 (반 선택 시 실시간 표시용) ──
+function _codeKey(sc,g,c){
+  const base='spq_code_'+(school||'default');
+  if(sc==='학년') return base+'_학년_'+g;
+  if(sc==='반')   return base+'_반_'+g+'_'+c;
+  return base+'_전체';
+}
+function _saveCodeLocal(sc,g,c,code){ try{localStorage.setItem(_codeKey(sc,g,c),code);}catch(e){} }
+function _getCodeLocal(sc,g,c){ try{return localStorage.getItem(_codeKey(sc,g,c))||'';}catch(e){return '';} }
+// 스프레드시트 '범위' 열에 기록할 사람이 읽기 쉬운 라벨 (학교전체 / N학년 / N학년 M반)
+function _scopeLabel(g,c){
+  g=Number(g)||0; c=Number(c)||0;
+  if(g>0&&c>0) return g+'학년 '+c+'반';
+  if(g>0) return g+'학년';
+  return '학교전체';
+}
+// 선택된 반의 저장 코드를 해당 학년 블록에 실시간 표시
+function _refreshClsCodeDisp(g){
+  const c=_clsSel[g]||1;
+  const area=document.getElementById('cls'+g+'-code-area');
+  const disp=document.getElementById('cls'+g+'-code-disp');
+  const lbl=document.getElementById('cls'+g+'-code-lbl');
+  const code=_getCodeLocal('반',g,c);
+  if(code){
+    if(lbl) lbl.textContent=g+'학년 '+c+'반 참여코드';
+    if(area) area.style.display='block';
+    _setCodeDisp(disp,code);
+  }else{
+    if(area) area.style.display='none';
+    if(disp) disp.value='';
+    if(lbl) lbl.textContent='';
+  }
+}
+async function _saveCodeToGAS(code,payload){
+  const d=driveCfg(); if(!d.url) return false;
+  try{
+    const res=await fetch(d.url,{method:'POST',mode:'cors',redirect:'follow',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({
+        action:'setCode', secret:d.secret, code,
+        school:payload.s||'', scope:payload.sc||'',
+        grade:payload.g||0, cls:payload.c||0,
+        url:payload.u||'', pwh:payload.p||''
+      })});
+    const j=await res.json().catch(()=>({}));
+    if(j&&j.ok===false){
+      console.warn('setCode GAS 오류:',j.error);
+      return {ok:false, error:j.error};
+    }
+    return {ok:true};
+  }catch(e){
+    console.warn('_saveCodeToGAS 네트워크 오류:',e);
+    return {ok:false, error:e.message};
+  }
+}
+
+async function generateWholeCode(){
+  // 학교전체 참여코드: scope 없음 → 참여자가 범위 직접 선택
+  const area=document.getElementById('whole-code-area');
+  const disp=document.getElementById('whole-code-disp');
+  const existing=_getCodeLocal('전체',0,0);
+  if(existing){
+    if(!confirm('학교전체 이전 코드 ['+existing+']는 사용할 수 없습니다.\n그래도 진행하시겠습니까?')) return;
+  }
+  const d=driveCfg();
+  const st=document.getElementById('whole-status');
+  const pwh=getAdminHash()||hashPW(getAdminPW());
+  if(d.url){
+    // GAS 활성: 4글자 단축코드 생성 후 저장
+    const code=_genCode();
+    if(st){st.style.color='#aaa';st.textContent='⏳ 코드 저장 중...';}
+    const r=await _saveCodeToGAS(code,{s:school||'',sc:'학교전체',g:0,c:0,u:d.url,p:pwh});
+    if(r&&r.ok){
+      _saveCodeLocal('전체',0,0,code);
+      if(area){area.style.display='block';_setCodeDisp(disp,code);}
+      if(st){st.style.color='#6bcb77';st.textContent='✅ 학교전체 참여코드('+code+') 생성됨 — 학교전체 게임에 참여합니다.';setTimeout(()=>st.textContent='',5000);}
+    }else{
+      if(st){st.style.color='#ff9999';st.textContent='⚠️ GAS 저장 실패'+(r&&r.error?' ('+r.error+')':'')+' — GAS 재배포 필요';setTimeout(()=>st.textContent='',6000);}
+    }
+    return;
+  }
+  // GAS 없음: 구형 HGP: 코드
+  const code='HGP:'+_b64enc(JSON.stringify({s:school||'',sc:'학교전체',g:0,c:0,u:'',p:pwh}));
+  _saveCodeLocal('전체',0,0,code);
+  if(area){area.style.display='block';_setCodeDisp(disp,code);}
+  if(st){st.style.color='#6bcb77';st.textContent='✅ 학교전체 참여코드가 생성되었습니다.';setTimeout(()=>st.textContent='',4000);}
+}
+async function generateScopeCode(sc,g,c,prefix){
+  // 참여코드: GAS 활성 → 4글자 단축코드, 비활성 → HGP: base64url
+  const area=document.getElementById(prefix+'-code-area');
+  const disp=document.getElementById(prefix+'-code-disp');
+  const lbl0=sc==='반'?g+'학년 '+c+'반':sc==='학년'?g+'학년':'전체';
+  const existing=_getCodeLocal(sc,g,c);
+  if(existing){
+    if(!confirm('['+lbl0+'] 이전 코드 ['+existing+']는 사용할 수 없습니다.\n그래도 진행하시겠습니까?')) return;
+  }
+  const d=driveCfg();
+  const st=document.getElementById(prefix+'-status');
+  const lbl=lbl0;
+  const pwh=getAdminHash()||hashPW(getAdminPW());
+  // 스프레드시트 '범위' 열에는 사람이 읽기 쉬운 라벨(N학년 / N학년 M반)을 저장
+  const payload={s:school||'',sc:_scopeLabel(g,c),g,c,u:d.url||'',p:pwh};
+  if(d.url){
+    const code=_genCode();
+    if(st){st.style.color='#aaa';st.textContent='⏳ 코드 저장 중...';}
+    const r=await _saveCodeToGAS(code,payload);
+    if(r&&r.ok){
+      _saveCodeLocal(sc,g,c,code);
+      if(area){area.style.display='block';_setCodeDisp(disp,code);}
+      if(st){st.style.color='#6bcb77';st.textContent='✅ '+lbl+' 참여코드('+code+') 생성됨';setTimeout(()=>st.textContent='',4000);}
+    }else{
+      if(st){st.style.color='#ff9999';st.textContent='⚠️ GAS 저장 실패'+(r&&r.error?' ('+r.error+')':'')+' — GAS 재배포 필요';setTimeout(()=>st.textContent='',6000);}
+    }
+    return;
+  }
+  // GAS 없음: 구형 HGP: 코드
+  const code='HGP:'+_b64enc(JSON.stringify(payload));
+  _saveCodeLocal(sc,g,c,code);
+  if(area){area.style.display='block';_setCodeDisp(disp,code);}
+  if(st){st.style.color='#6bcb77';st.textContent='✅ '+lbl+' 참여코드 생성됨';setTimeout(()=>st.textContent='',4000);}
+}
+function generateClsCode(g){
+  const c=_clsSel[g]||1;
+  const lbl=document.getElementById('cls'+g+'-code-lbl');
+  if(lbl) lbl.textContent='1학년'.replace('1',g)+' '+c+'반 참여코드';
+  generateScopeCode('반',g,c,'cls'+g);
+}
+function copyScopeCode(prefix){
+  const v=document.getElementById(prefix+'-code-disp').value;
+  if(!v) return;
+  navigator.clipboard.writeText(v).catch(()=>{});
+  const st=document.getElementById(prefix+'-status');
+  if(st){st.style.color='#6bcb77';st.textContent='✅ 클립보드에 복사되었습니다!';setTimeout(()=>st.textContent='',2000);}
+}
+function copyClsCode(g){ copyScopeCode('cls'+g); }
+// ── URL 파라미터 입장 (QR 코드 스캔) ─────────────────────
+function checkURLParams(){
+  try{
+    const p=new URLSearchParams(location.search);
+    const s=p.get('s'), gas=p.get('gas');
+    if(!s||!gas) return false;
+    const sc=p.get('sc')||'';
+    const g=parseInt(p.get('g'))||0;
+    const c=parseInt(p.get('c'))||0;
+    const pwh=p.get('p')||'';
+    // URL 파라미터 제거 (뒤로가기 때 중복 방지)
+    history.replaceState({},document.title,location.pathname);
+    _applyCodePayload({s,sc,g,c,u:gas,p:pwh});
+    return true;
+  }catch(e){return false;}
+}
+
+// ── QR 코드용 URL 생성 ────────────────────────────────────
+function _buildQRUrl(sc,g,c){
+  const d=driveCfg();
+  const base=location.origin+location.pathname;
+  const params=new URLSearchParams({
+    s:school||'',gas:d.url||'',
+    sc:sc||'',g:g||0,c:c||0,
+    p:getAdminHash()||hashPW(getAdminPW())
+  });
+  return base+'?'+params.toString();
+}
+
+function showScopeQR(prefix){
+  if(!school){alert('먼저 학교 이름을 설정하세요.');return;}
+  // prefix → sc/g/c 해석
+  let sc='전체',g=0,c=0;
+  if(prefix==='whole'){sc='전체';g=0;c=0;}
+  else if(prefix==='grd'){sc='학년';g=_gradeSel;c=0;}
+  else if(/^g\d$/.test(prefix)){sc='학년';g=parseInt(prefix[1]);c=0;}
+  else if(/^cls\d$/.test(prefix)){sc='반';g=parseInt(prefix[3]);c=_clsSel[g]||1;}
+  const url=_buildQRUrl(sc,g,c);
+  const d=driveCfg();
+  const cv=document.getElementById('qr-canvas');
+  cv.innerHTML='';
+  new QRCode(cv,{text:url,width:256,height:256,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.H});
+  // GAS URL 없으면 경고 표시
+  const warn=document.getElementById('qr-warn');
+  if(warn) warn.style.display=d.url?'none':'block';
+  document.getElementById('qr-modal').style.display='flex';
+}
+function showClsQR(g){ showScopeQR('cls'+g); }
+
+async function saveDrive(){
+  const url=document.getElementById('drive-url').value.trim();
+  const newSecret=document.getElementById('drive-secret').value.trim()||'0000';
+  const oldSecret=localStorage.getItem('spq_drive_secret')||'0000'; // 인증용 기존 비번
+  localStorage.setItem('spq_drive_url',url);
+  localStorage.setItem('spq_drive_secret',newSecret);
+  localStorage.setItem('spq_drive_enabled',document.getElementById('drive-enabled').checked?'1':'0');
+  const st=document.getElementById('drive-status');
+  if(url){
+    st.style.color='#ffd93d';st.textContent='⏳ GAS에 비밀번호 동기화 중...';
+    try{
+      const res=await fetch(url,{method:'POST',mode:'cors',redirect:'follow',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'setPassword',secret:oldSecret,newPassword:newSecret})});
+      const j=await res.json().catch(()=>({}));
+      if(j&&j.ok===false){
+        st.style.color='#ffb3b3';st.textContent='⚠️ GAS 비밀번호 동기화 실패: '+(j.error||'오류');
+      } else {
+        st.style.color='#6bcb77';st.textContent='✅ 설정 저장 및 비밀번호 자동 동기화 완료';
+      }
+    }catch(e){
+      st.style.color='#ffb3b3';st.textContent='⚠️ 설정은 저장됐으나 GAS 동기화 실패 — URL을 확인하세요.';
+    }
+  } else {
+    st.style.color='#6bcb77';st.textContent='✅ 설정이 저장되었습니다.';
+  }
+}
+async function testDrive(){
+  const url=document.getElementById('drive-url').value.trim();
+  const st=document.getElementById('drive-status');
+  if(!url){st.style.color='#ffb3b3';st.textContent='❌ 웹앱 URL을 입력하세요.';return;}
+  st.style.color='#ffd93d';st.textContent='🔌 연결을 시도하는 중...';
+  try{
+    const res=await fetch(url,{method:'GET',mode:'cors',redirect:'follow'});
+    const j=await res.json();
+    if(j&&j.ok!==false){st.style.color='#6bcb77';st.textContent='✅ 연결 성공! 현재 저장된 기록 '+(j.rows?j.rows.length:0)+'개';}
+    else{st.style.color='#ffb3b3';st.textContent='⚠️ 응답은 받았으나 형식이 예상과 다릅니다. 스크립트 코드를 확인하세요.';}
+  }catch(e){st.style.color='#ffb3b3';st.textContent='❌ 연결 실패: '+e.message+' — URL/배포 권한(모든 사용자)을 확인하세요.';}
+}
+function copyGas(){
+  const t=document.getElementById('gas-code').textContent;
+  navigator.clipboard.writeText(t).then(()=>{
+    const st=document.getElementById('drive-status');
+    st.style.color='#6bcb77';st.textContent='📋 코드가 복사되었습니다. Apps Script에 붙여넣으세요.';
+  }).catch(()=>{});
+}
+function toggleHand(cb){
+  localStorage.setItem('spq_hand', cb.checked?'1':'0');
+  const st=document.getElementById('hand-status');
+  st.style.color='#ffd93d';
+  st.textContent='✅ 저장됨 — 새로고침(F5) 후 적용됩니다.';
+}
+
+// ── EXCEL WORDS ──
+function getCustom(){try{return JSON.parse(localStorage.getItem('spq_custom'));}catch{return null;}}
+function loadExcel(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const sheet=wb.Sheets[wb.SheetNames[0]];
+      const data=XLSX.utils.sheet_to_json(sheet,{header:1});
+      const cw={1:[],2:[],3:[]};
+      const headers=data[0]||[];const colMap={};
+      // 머리글: 저학년/중학년/고학년 (또는 1/2/3단계)
+      headers.forEach((h,i)=>{
+        const t=String(h);
+        if(/저학년|1단계/.test(t)) colMap[1]=i;
+        else if(/중학년|2단계/.test(t)) colMap[2]=i;
+        else if(/고학년|3단계/.test(t)) colMap[3]=i;
+      });
+      // 각 셀: "한글음|한자|뜻" (구분자 | 또는 / 또는 ,)
+      for(let r=1;r<data.length;r++){
+        const row=data[r];
+        for(let s=1;s<=3;s++){
+          if(colMap[s]===undefined) continue;
+          const v=row[colMap[s]]; if(!v||!String(v).trim()) continue;
+          const parts=String(v).split(/[|/,]/).map(x=>x.trim());
+          if(parts[0]) cw[s].push({i:parts[0], m:parts[1]||''});
+        }
+      }
+      localStorage.setItem('spq_custom',JSON.stringify(cw));
+      document.getElementById('excel-status').textContent='✅ 성공적으로 등록되었습니다!';
+      renderWordPreviews(cw);
+    }catch(err){document.getElementById('excel-status').textContent='❌ 파일 읽기 실패: '+err.message;}
+  };
+  reader.readAsBinaryString(file);input.value='';
+}
+function renderWordPreviews(custom){
+  const names={1:'저학년 (초1~2)',2:'중학년 (초3~4)',3:'고학년 (초5↑)'};
+  const container=document.getElementById('word-previews');
+  container.innerHTML=Object.entries(names).map(([s,name])=>{
+    const list=(custom&&custom[s])||[];
+    const display=list.length?list:(DEF[s]||[]);
+    const isCustom=list.length>0;
+    return `<div style="margin-bottom:14px;">
+      <div style="color:${isCustom?'#6bcb77':'#ffd93d'};font-weight:800;margin-bottom:7px;">
+        ${name} — ${display.length}개 ${isCustom?'(커스텀)':'(기본값)'}
+      </div>
+      <div class="word-preview">${display.map(w=>`<span class="wtag" title="${(w.h||'')+' '+(w.m||'')}">${w.i||w}</span>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+function resetWords(){
+  if(!confirm('커스텀 단어를 삭제하고 기본값으로 초기화하시겠습니까?'))return;
+  localStorage.removeItem('spq_custom');
+  document.getElementById('excel-status').textContent='✅ 기본값으로 초기화되었습니다.';
+  renderWordPreviews(null);
+}
+
+// ═════════════════════════════════════════════
+// BGM (Web Audio API 멜로디 루프)
+// ═════════════════════════════════════════════
+function bgmEnabled(){ return localStorage.getItem('spq_bgm')!=='0'; }
+let bgmSource=null, bgmBuffer=null, bgmGainNode=null;
+const BGM_BEAT=60/128; // BPM 128 → 한 박자(초)
+// 알쏭달쏭 속담 퀴즈 테마 — 동양풍 5음계 (C 장조 펜타토닉)
+const BGM_NOTES=[
+  // ─ 1절: 출발 ─
+  [392,.5],[440,.5],[524,.5],[440,.5],[392,1],[330,.5],[392,.5],
+  [440,.5],[524,.5],[587,.5],[524,.5],[440,1.5],[0,.5],
+  // ─ 2절: 상승 ─
+  [524,.5],[587,.5],[659,.5],[587,.5],[524,.5],[440,.5],[392,.5],[330,.5],
+  [294,.5],[330,.5],[392,.5],[440,.5],[524,2],
+  // ─ 3절: 클라이맥스 ─
+  [659,.5],[659,.5],[587,.5],[524,.5],[440,.5],[524,.5],[587,.5],[0,.5],
+  [524,.5],[440,.5],[392,.5],[330,.5],[392,1],[294,1],
+  // ─ 4절: 마무리 ─
+  [330,.5],[392,.5],[440,.5],[524,.5],[440,.5],[392,.5],[330,.5],[294,.5],
+  [330,.5],[294,.5],[262,.5],[294,.5],[392,2],
+];
+// 베이스 라인 (사인파, 멜로디와 동길이 32박)
+const BGM_BASS=[
+  [196,2],[220,2],[196,2],[131,2],
+  [196,2],[131,2],[196,2],[220,2],
+  [196,2],[220,2],[196,2],[131,2],
+  [220,2],[196,2],[131,2],[196,2],
+];
+
+async function _buildBGMBuffer(){
+  const ctx=getAC();
+  const totalBeats=BGM_NOTES.reduce((s,[,d])=>s+d,0);
+  const totalSec=totalBeats*BGM_BEAT;
+  const sr=ctx.sampleRate;
+  const oac=new OfflineAudioContext(1,Math.ceil((totalSec+0.05)*sr),sr);
+  let t=0;
+  // 멜로디 레이어 (스퀘어파 — 경쾌한 치프튠)
+  for(const [freq,beats] of BGM_NOTES){
+    const dur=beats*BGM_BEAT;
+    if(freq>0){
+      const osc=oac.createOscillator(), g=oac.createGain();
+      osc.connect(g); g.connect(oac.destination);
+      osc.type='square'; osc.frequency.value=freq;
+      g.gain.setValueAtTime(0.08,t);
+      g.gain.setValueAtTime(0.08,t+dur*0.65);
+      g.gain.exponentialRampToValueAtTime(0.001,t+dur*0.92);
+      osc.start(t); osc.stop(t+dur);
+    }
+    t+=dur;
+  }
+  // 베이스 레이어 (사인파 — 부드러운 저음)
+  t=0;
+  for(const [freq,beats] of BGM_BASS){
+    const dur=beats*BGM_BEAT;
+    if(freq>0){
+      const osc=oac.createOscillator(), g=oac.createGain();
+      osc.connect(g); g.connect(oac.destination);
+      osc.type='sine'; osc.frequency.value=freq;
+      g.gain.setValueAtTime(0.07,t);
+      g.gain.setValueAtTime(0.07,t+dur*0.88);
+      g.gain.exponentialRampToValueAtTime(0.001,t+dur*0.98);
+      osc.start(t); osc.stop(t+dur);
+    }
+    t+=dur;
+  }
+  return await oac.startRendering();
+}
+
+async function startBGM(){
+  if(!bgmEnabled()) return;
+  stopBGM();
+  try{
+    if(!bgmBuffer) bgmBuffer=await _buildBGMBuffer();
+    const ctx=getAC();
+    await ctx.resume();
+    bgmGainNode=ctx.createGain(); bgmGainNode.gain.value=0.22;
+    bgmSource=ctx.createBufferSource();
+    bgmSource.buffer=bgmBuffer; bgmSource.loop=true;
+    bgmSource.connect(bgmGainNode); bgmGainNode.connect(ctx.destination);
+    bgmSource.start();
+  }catch(e){ console.warn('BGM 시작 실패:',e); }
+}
+
+function stopBGM(){
+  if(bgmSource){try{bgmSource.stop();}catch(e){} bgmSource=null;}
+  bgmGainNode=null;
+}
+
+function toggleBGM(cb){
+  localStorage.setItem('spq_bgm',cb.checked?'1':'0');
+  const st=document.getElementById('bgm-status');
+  st.style.color='#ffd93d';
+  st.textContent=cb.checked?'✅ 다음 게임부터 배경음악이 재생됩니다.':'✅ 배경음악이 꺼집니다.';
+  if(!cb.checked) stopBGM();
+}
+
+// ═════════════════════════════════════════════
+// 단어 난이도 자동 조정 (오답 단어 가중치)
+// ═════════════════════════════════════════════
+function getWrongHist(){ try{return JSON.parse(localStorage.getItem('spq_wrong_hist')||'{}');}catch{return{};} }
+function saveWrongHist(h){ localStorage.setItem('spq_wrong_hist',JSON.stringify(h)); }
+
+function addWrongHistory(words){
+  if(!words||!words.length) return;
+  const h=getWrongHist();
+  words.forEach(w=>{ h[w]=(h[w]||0)+1; });
+  const keys=Object.keys(h);
+  if(keys.length>500) keys.sort((a,b)=>h[a]-h[b]).slice(0,keys.length-500).forEach(k=>delete h[k]);
+  saveWrongHist(h);
+}
+
+function buildAdaptiveQueue(pool,n){
+  const h=getWrongHist();
+  // 자주 틀린 속담을 최대 3회 추가 복사해 가중치 부여 (.i 기준)
+  const weighted=[...pool];
+  pool.forEach(w=>{ const cnt=h[w.i]||0; if(cnt>0) for(let i=0;i<Math.min(cnt,3);i++) weighted.push(w); });
+  let q=shuffle(weighted);
+  while(q.length<n) q=[...q,...shuffle(weighted)];
+  return q.slice(0,n);
+}
+
+// ═════════════════════════════════════════════
+// 성장 차트 (날짜별 정답률 꺾은선)
+// ═════════════════════════════════════════════
+function renderGrowthChart(name){
+  const section=document.getElementById('an-chart-section');
+  if(!name){ section.style.display='none'; return; }
+  let raw=_anScopeOverride?getLBForScope(_anScopeOverride.sc,_anScopeOverride.g,_anScopeOverride.c):getLB();
+  const data=raw.filter(e=>e.name===name)
+    .sort((a,b)=>(a.ts||a.date||'').localeCompare(b.ts||b.date||''));
+  if(data.length<2){ section.style.display='none'; return; }
+  section.style.display='block';
+
+  const canvas=document.getElementById('an-growth-chart');
+  const W=Math.min(section.offsetWidth||window.innerWidth-48, 800);
+  const H=200;
+  canvas.width=W; canvas.height=H;
+  const c=canvas.getContext('2d');
+  c.clearRect(0,0,W,H);
+
+  const PAD={l:46,r:16,t:18,b:36};
+  const CW=W-PAD.l-PAD.r, CH=H-PAD.t-PAD.b;
+
+  // 배경
+  c.fillStyle='rgba(76,201,240,0.05)';
+  c.beginPath(); if(c.roundRect){c.roundRect(0,0,W,H,10);}else{c.rect(0,0,W,H);} c.fill();
+
+  // 그리드 라인 + Y축 레이블
+  [0,25,50,75,100].forEach(v=>{
+    const y=PAD.t+CH-(v/100)*CH;
+    c.strokeStyle='rgba(255,255,255,0.08)'; c.lineWidth=1;
+    c.beginPath(); c.moveTo(PAD.l,y); c.lineTo(PAD.l+CW,y); c.stroke();
+    c.fillStyle='rgba(255,255,255,0.38)'; c.font='11px sans-serif'; c.textAlign='right';
+    c.fillText(v+'%',PAD.l-5,y+4);
+  });
+
+  const n=data.length;
+  const pts=data.map((e,i)=>({
+    x: n===1?PAD.l+CW/2:PAD.l+(i/(n-1))*CW,
+    y: PAD.t+CH-((e.correctRate||0)/100)*CH,
+    rate: e.correctRate||0, date:(e.date||'').slice(-5)
+  }));
+
+  // 영역 채우기
+  c.fillStyle='rgba(76,201,240,0.08)';
+  c.beginPath(); c.moveTo(pts[0].x,PAD.t+CH);
+  pts.forEach(p=>c.lineTo(p.x,p.y));
+  c.lineTo(pts[pts.length-1].x,PAD.t+CH); c.closePath(); c.fill();
+
+  // 라인
+  c.strokeStyle='rgba(76,201,240,0.85)'; c.lineWidth=2.5; c.lineJoin='round';
+  c.beginPath(); pts.forEach((p,i)=>i===0?c.moveTo(p.x,p.y):c.lineTo(p.x,p.y)); c.stroke();
+
+  // 포인트 + 날짜
+  const step=Math.ceil(n/10);
+  pts.forEach((p,i)=>{
+    c.beginPath(); c.arc(p.x,p.y,5,0,Math.PI*2);
+    c.fillStyle=p.rate>=80?'#6bcb77':p.rate>=60?'#ffd93d':'#ff6b6b'; c.fill();
+    c.strokeStyle='rgba(255,255,255,0.7)'; c.lineWidth=1.5; c.stroke();
+    if(n<=12||i%step===0||i===n-1){
+      c.fillStyle='rgba(255,255,255,0.38)'; c.font='9px sans-serif'; c.textAlign='center';
+      c.fillText(p.date,p.x,H-6);
+    }
+  });
+
+  const avg=+(data.reduce((s,e)=>s+(e.correctRate||0),0)/n).toFixed(1);
+  const trend=data[n-1].correctRate-data[0].correctRate;
+  document.getElementById('an-chart-info').textContent=
+    `${name} · ${n}회 플레이 · 평균 정답률 ${avg}% · 변화 ${trend>=0?'+':''}${trend.toFixed(1)}%`;
+}
+
+// ═════════════════════════════════════════════
+// 관리자 PIN 강도
+// ═════════════════════════════════════════════
+function checkPWStrength(pw){
+  if(!pw||pw.length<4) return {pct:0, label:'4자 이상 입력하세요', color:'#555'};
+  const hasNum=/\d/.test(pw), hasAlpha=/[a-zA-Z]/.test(pw), hasSpecial=/[^a-zA-Z0-9]/.test(pw);
+  const variety=[hasNum,hasAlpha,hasSpecial].filter(Boolean).length;
+  if(pw.length>=8&&variety>=2) return {pct:100, label:'강함 🔒', color:'#6bcb77'};
+  if(pw.length>=6&&variety>=1) return {pct:60, label:'보통 🔑', color:'#ffd93d'};
+  return {pct:28, label:'약함 🔓', color:'#ff9933'};
+}
+
+function updatePWStrength(val){
+  const s=checkPWStrength(val);
+  const fill=document.getElementById('pw-strength-fill');
+  const lbl=document.getElementById('pw-strength-lbl');
+  if(fill){fill.style.width=s.pct+'%'; fill.style.background=s.color;}
+  if(lbl){lbl.style.color=s.color; lbl.textContent=s.label;}
+}
+
+// ═════════════════════════════════════════════
+// INIT
+// ═════════════════════════════════════════════
+// ── 게임 화면 터치 위임 핸들러 (보기 카드 선택) ──
+function _hitOptionAt(x,y){
+  if(!gameActive) return;
+  const cards=[...document.querySelectorAll('#quiz-board .opt-card:not(.done)')];
+  for(let i=cards.length-1;i>=0;i--){
+    const r=cards[i].getBoundingClientRect();
+    if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom){
+      selectOption(parseInt(cards[i].dataset.idx));
+      return;
+    }
+  }
+}
+let _lastTouchHit=0;
+window.addEventListener('load',()=>{
+  startCameraAndHands();
+  // QR 스캔으로 열린 경우 URL 파라미터 자동 처리
+  if(!checkURLParams()) show('mode');
+
+  // 터치스크린 직접 터치 (마우스 클릭은 카드 onclick이 처리)
+  document.getElementById('screen-game').addEventListener('touchstart',e=>{
+    if(!gameActive) return;
+    e.preventDefault();
+    const now=performance.now();
+    if(now-_lastTouchHit<200) return;  // 200ms 내 연타 무시
+    _lastTouchHit=now;
+    const t=e.changedTouches[0];
+    _hitOptionAt(t.clientX, t.clientY);
+  },{passive:false});
+});
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+</script>
+
+<!-- ══ MODALS ══ -->
+<!-- QR 코드 모달 -->
+<div id="qr-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:9999;flex-direction:column;align-items:center;justify-content:center;">
+  <div style="background:#222;padding:20px;border-radius:16px;text-align:center;max-width:340px;width:92%;">
+    <h3 style="color:#fff;margin-bottom:12px;">📱 학생 참여 QR 코드</h3>
+    <div id="qr-canvas" style="background:#fff;padding:12px;border-radius:8px;width:280px;height:280px;display:flex;align-items:center;justify-content:center;margin:0 auto;"></div>
+    <p style="color:rgba(255,255,255,.8);font-size:.95rem;margin-top:12px;line-height:1.5;">
+      📌 학생이 폰 카메라로 스캔하면<br>앱이 자동으로 열리고 설정이 적용됩니다.
+    </p>
+    <div id="qr-warn" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(255,180,0,.15);border-radius:8px;color:#ffcc44;font-size:.85rem;">
+      ⚠️ GAS URL이 없어 점수가 클라우드에 저장되지 않습니다.<br>환경설정 → Google Sheets 연동을 먼저 설정하세요.
+    </div>
+    <button class="btn btn-sm btn-primary" onclick="closeQRModal()" style="margin-top:16px;">닫기</button>
+  </div>
+</div>
+
+</body>
+</html>
+
+
+
+
