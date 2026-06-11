@@ -1554,7 +1554,7 @@ function updateCursors(tips){
 }
 function hideCursors(){const c=document.getElementById('hand-cursors');if(c)[...c.children].forEach(d=>d.style.display='none');}
 
-const MENU_SCREENS=new Set(['mode','login','scope','intro','name','stage','end','analysis']);
+const MENU_SCREENS=new Set(['mode','login','scope','intro','name','stage','end','wrong-review','analysis']);
 function onHandResults(res){
   lastHandFrame=Date.now();
   const tips=[];
