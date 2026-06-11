@@ -1442,6 +1442,7 @@ const _spawnReg=new WeakMap(); // 버블 X위치 등록 (겹침 방지 — 동�
 let curScreen='mode';
 let dwellEl=null, dwellTimer=null;
 const DWELL_MS=700;
+let gestureBlockedUntil=0;
 let wrongWordsSession=[], wrongClickCount=0, gameStartTime=0;
 
 const PTS={1:4,2:6,3:8};            // 정답 점수 (저/중/고)
@@ -1580,6 +1581,7 @@ function clearDwell(){
   if(dwellEl){dwellEl.classList.remove('gesture-hover','gesture-clicked');dwellEl=null;}
 }
 function checkMenuGesture(tips){
+  if(Date.now()<gestureBlockedUntil){clearDwell();return;}
   if(!tips.length){clearDwell();return;}
   const tip=tips[0];
   const btns=document.querySelectorAll('#screen-'+curScreen+' .gesture-btn');
@@ -2375,6 +2377,8 @@ function endGame(completed){
 
 // ── POST GAME OPTIONS ──
 function confirmWrongReview(){
+  clearDwell();
+  gestureBlockedUntil=Date.now()+2000;
   show('end');
 }
 function optContinue(){
