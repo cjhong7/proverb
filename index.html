@@ -1708,49 +1708,70 @@ function switchLoginTab(tab){
 }
 
 // ── 학교 이름 음성 입력 ──────────────────────────────
-let _schoolRec=null;
+let _schoolRec=null, _schoolLastTxt='', _schoolDone=false;
+function _cleanSchoolText(t){
+  return t.replace(/[\p{P}\p{S}]/gu,'').replace(/\s+/g,' ').trim();
+}
 function startSchoolVoice(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   const btn=document.getElementById('school-mic-btn');
   const inp=document.getElementById('student-school');
   const st=document.getElementById('school-mic-status');
-  // 이전 인식 완전 초기화 (재시도 시 이전 결과 잔류 방지)
-  if(_schoolRec){try{_schoolRec.onresult=null;_schoolRec.onerror=null;_schoolRec.onend=null;_schoolRec.abort();}catch(e){}  _schoolRec=null;}
-  if(!SR){inp.focus();st.textContent='음성 인식을 지원하지 않는 브라우저입니다.';return;}
+  // 녹음 중 재클릭 → 강제 중단 (지금까지 들은 것 적용)
+  if(_schoolRec){try{_schoolRec.stop();}catch(e){}return;}
+  if(!SR){
+    inp.focus();
+    st.style.color='rgba(200,180,120,.7)';
+    st.textContent='Chrome 브라우저에서 사용하세요.';return;
+  }
+  _schoolLastTxt='';_schoolDone=false;
   btn.textContent='🔴';btn.classList.add('recording');
-  st.textContent='🎙 말씀하세요…';
+  st.style.color='rgba(200,220,255,.85)';st.textContent='🎙 학교 이름을 말씀하세요…';
   const rec=new SR();
   _schoolRec=rec;
-  rec.lang='ko-KR';rec.continuous=false;rec.interimResults=false;rec.maxAlternatives=5;
+  rec.lang='ko-KR';rec.continuous=false;rec.interimResults=true;
   rec.onresult=(e)=>{
-    // 후보 중 학교 이름 형태에 가장 가까운 것 선택
-    let best='';
-    for(let i=0;i<e.results[0].length;i++){
-      const t=e.results[0][i].transcript||'';
-      // Unicode 구두점·기호 전체 제거, 공백 정리
-      const cleaned=t.replace(/[\p{P}\p{S}]/gu,'').replace(/\s+/g,' ').trim();
-      if(cleaned.length>best.length) best=cleaned;
+    let fin='',inter='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const t=e.results[i][0].transcript||'';
+      if(e.results[i].isFinal) fin+=t; else inter+=t;
     }
-    if(best){
-      inp.value=best;
-      st.style.color='#6bcb77';st.textContent='✅ 인식 완료: '+best;
-    }else{
-      st.style.color='rgba(200,180,120,.7)';st.textContent='인식된 내용이 없습니다. 다시 시도하세요.';
+    if(fin){
+      const c=_cleanSchoolText(fin);
+      if(c){inp.value=c;_schoolDone=true;_schoolLastTxt=c;
+        st.style.color='#6bcb77';st.textContent='✅ 인식 완료: '+c;}
+    }else if(inter){
+      _schoolLastTxt=inter; // 중간 결과 보관
+      st.style.color='rgba(180,220,255,.9)';
+      st.textContent='🎙 …'+_cleanSchoolText(inter)+'…';
     }
-    _reset();
   };
   rec.onerror=(e)=>{
-    // no-speech 등 가벼운 오류는 조용히 처리
-    if(e.error!=='no-speech'&&e.error!=='aborted'){
-      st.style.color='rgba(200,180,120,.7)';st.textContent='인식 실패. 다시 시도하거나 직접 입력하세요.';
-    }else{
-      st.textContent='';
+    if(e.error==='aborted') return;
+    if(e.error==='no-speech'){
+      // 중간 결과라도 있으면 적용
+      if(_schoolLastTxt){const c=_cleanSchoolText(_schoolLastTxt);if(c){inp.value=c;_schoolDone=true;st.style.color='#6bcb77';st.textContent='✅ 인식 완료: '+c;}}
+      else{st.style.color='rgba(200,180,120,.6)';st.textContent='';}
+      return;
     }
-    _reset();
+    const msgs={
+      'not-allowed':'마이크 권한을 허용해주세요.',
+      'permission-denied':'마이크 권한을 허용해주세요.',
+      'network':'네트워크 오류. 인터넷 연결을 확인하세요.',
+      'audio-capture':'마이크를 찾을 수 없습니다.',
+    };
+    st.style.color='rgba(255,150,100,.9)';
+    st.textContent=msgs[e.error]||'인식 실패. 다시 시도하세요.';
   };
-  rec.onend=()=>_reset();
-  function _reset(){btn.textContent='🎤';btn.classList.remove('recording');_schoolRec=null;}
-  try{rec.start();}catch(e){_reset();st.textContent='';}
+  rec.onend=()=>{
+    btn.textContent='🎤';btn.classList.remove('recording');_schoolRec=null;
+    // 최종 결과 없어도 중간 결과 있으면 입력창에 적용
+    if(!_schoolDone&&_schoolLastTxt){
+      const c=_cleanSchoolText(_schoolLastTxt);
+      if(c){inp.value=c;st.style.color='#6bcb77';st.textContent='✅ 인식 완료: '+c;}
+    }
+  };
+  try{rec.start();}catch(e){btn.textContent='🎤';btn.classList.remove('recording');_schoolRec=null;st.textContent='';}
 }
 
 // 학생이 학교이름 입력 → 참여자 모드로 범위 선택
