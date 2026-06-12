@@ -93,13 +93,21 @@ body{width:100vw;height:100vh;overflow:hidden;background:#0C1B2E;font-family:'Na
 /* ──── STAGE SELECT ──── */
 #screen-stage{flex-direction:column;align-items:center;justify-content:center;gap:20px;background:rgba(5,12,25,.7);padding:20px;}
 .stage-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;width:90%;max-width:600px;}
-.s-btn{background:rgba(20,40,70,.45);backdrop-filter:blur(8px);border:2px solid rgba(180,150,80,.28);
+.s-btn{position:relative;background:rgba(20,40,70,.45);backdrop-filter:blur(8px);border:2px solid rgba(180,150,80,.28);
   border-radius:12px;padding:24px 10px;color:#F0E8D0;cursor:pointer;text-align:center;transition:all .2s;font-family:inherit;}
-.s-btn:hover,.s-btn.sel{background:linear-gradient(135deg,#1E3A5F,#2E5C96);border-color:rgba(200,170,90,.7);transform:scale(1.05);}
+.s-btn:hover{background:linear-gradient(135deg,#1E3A5F,#2E5C96);border-color:rgba(200,170,90,.7);transform:scale(1.04);}
+.s-btn.sel{background:linear-gradient(135deg,#1A6B38,#27AE60)!important;
+  border:2.5px solid rgba(100,220,130,.9)!important;transform:scale(1.06)!important;
+  box-shadow:0 0 22px rgba(67,233,123,.55),0 0 44px rgba(40,180,80,.28)!important;}
+.s-btn.sel::after{content:'✓ 선택됨';position:absolute;top:8px;right:10px;
+  font-size:.72rem;font-weight:800;color:#A8FFD0;
+  background:rgba(15,80,35,.75);padding:2px 7px;border-radius:10px;}
 .s-btn .sn{font-size:1.9rem;font-weight:800;}
 .s-btn .sd{font-size:1rem;margin-top:6px;}
 .s-btn .sp{font-size:.92rem;color:#C9A84C;margin-top:4px;}
-.s-btn.sel .sp{color:#E8C96A;}
+.s-btn.sel .sn{color:#fff!important;}
+.s-btn.sel .sd{color:rgba(210,255,220,.85)!important;}
+.s-btn.sel .sp{color:#A8FFD0!important;}
 
 /* ──── ANALYSIS ──── */
 #screen-analysis{flex-direction:column;align-items:flex-start;justify-content:flex-start;
@@ -557,7 +565,7 @@ details.guide pre{background:#050e1e;border:1px solid rgba(180,150,80,.18);borde
   <div class="wr-title">❌ 틀린 속담 확인</div>
   <div class="wr-sub" id="wr-sub-text"></div>
   <div class="wr-list" id="wr-list"></div>
-  <button class="wr-confirm gesture-btn" onclick="confirmWrongReview()">확인</button>
+  <button class="wr-confirm gesture-btn" data-dwell="200" onclick="confirmWrongReview()">확인</button>
 </div>
 
 <!-- ══ STAGE END ══ -->
@@ -1596,6 +1604,7 @@ function checkMenuGesture(tips){
   clearDwell();
   dwellEl=hit;
   hit.classList.add('gesture-hover');
+  const dwellMs=parseInt(hit.dataset.dwell)||DWELL_MS;
   dwellTimer=setTimeout(()=>{
     if(dwellEl){
       dwellEl.classList.remove('gesture-hover');
@@ -1605,7 +1614,7 @@ function checkMenuGesture(tips){
       el.click();
       setTimeout(()=>el.classList.remove('gesture-clicked'),200);
     }
-  },DWELL_MS);
+  },dwellMs);
 }
 function checkHandCollision(tips){
   const now=performance.now();
@@ -2378,7 +2387,7 @@ function endGame(completed){
 // ── POST GAME OPTIONS ──
 function confirmWrongReview(){
   clearDwell();
-  gestureBlockedUntil=Date.now()+2000;
+  gestureBlockedUntil=Date.now()+1500;
   show('end');
 }
 function optContinue(){
